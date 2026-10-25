@@ -2,6 +2,8 @@
 
 **遊戲開發：吳玉柱 與 Claude AI Opus 5.5**
 <img width="1910" height="1079" alt="image" src="https://github.com/user-attachments/assets/f5f40310-80ce-4cfa-846d-21b352bd0f62" />
+<img width="1913" height="1079" alt="image" src="https://github.com/user-attachments/assets/1bdc61df-38ea-45a4-ab30-92b28585c57e" />
+<img width="622" height="941" alt="image" src="https://github.com/user-attachments/assets/8e6b601a-a85f-4107-b2a3-64815e55a54c" />
 
 3D 立體中國象棋桌面遊戲（Windows 11 優先，MacBook Pro 次之）。從「小柯機器人遠端連線」的構想延伸而來，沿用同一套 WebRTC 點對點連線。
 
