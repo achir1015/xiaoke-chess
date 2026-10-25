@@ -1,4 +1,5 @@
 # 小柯機器人象棋遊戲
+<img width="1910" height="1079" alt="image" src="https://github.com/user-attachments/assets/f5f40310-80ce-4cfa-846d-21b352bd0f62" />
 
 3D 立體中國象棋桌面遊戲（Windows 11 優先，MacBook Pro 次之）。從「小柯機器人遠端連線」的構想延伸而來，沿用同一套 WebRTC 點對點連線。
 
