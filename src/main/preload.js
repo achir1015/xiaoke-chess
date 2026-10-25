@@ -13,6 +13,10 @@ contextBridge.exposeInMainWorld('xk', {
     delete: inv('games:delete'), export: inv('games:export'), pickImport: inv('games:pickImport'),
   },
   music: { list: inv('music:list'), add: inv('music:add'), remove: inv('music:remove') },
+  update: {
+    check: inv('update:check'), download: inv('update:download'), install: inv('update:install'), openPage: inv('update:openPage'),
+    onProgress: (fn) => { const h = (e, d) => fn(d); ipcRenderer.on('update:progress', h); return () => ipcRenderer.off('update:progress', h); },
+  },
   advisor: {
     ask: (id, payload) => ipcRenderer.send('advisor:ask', id, payload),
     cancel: (id) => ipcRenderer.send('advisor:cancel', id),

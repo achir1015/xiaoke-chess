@@ -1,8 +1,8 @@
 {
   "name": "xiaoke-chess",
   "productName": "小柯機器人象棋遊戲",
-  "version": "1.0.0",
-  "description": "小柯機器人象棋遊戲：3D 中國象棋（與 AI 對賽、遠端真人對賽、語音通話、背景音樂、AI 軍師、自動學習棋譜）",
+  "version": "1.1.0",
+  "description": "小柯機器人象棋遊戲：3D 中國象棋整盤與半盤（與 AI、遠端真人＋語音、AI 對 AI、背景音樂、AI 軍師、學習棋譜、自動更新）",
   "main": "src/main/main.js",
   "author": {
     "name": "吳玉柱",
@@ -12,7 +12,7 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test test/",
-    "e2e": "node e2e/run.mjs",
+    "e2e": "node e2e/smoke.mjs && node e2e/half.mjs",
     "music": "python scripts/gen_music.py",
     "dist:win": "electron-builder --win nsis portable --x64 --publish never",
     "dist:mac": "electron-builder --mac dmg --publish never"

@@ -55,6 +55,13 @@ export const sfx = {
     tone(880, 0.25, { type: 'triangle', gain: 0.18, when: 0.02 });
     tone(1320, 0.35, { type: 'triangle', gain: 0.14, when: 0.12 });
   },
+  flip() {
+    if (!enabled) return;
+    noise(0.06, { gain: 0.35, freq: 2600, q: 2 });
+    tone(760, 0.12, { type: 'triangle', gain: 0.12, slide: 1.4 });
+    noise(0.07, { gain: 0.45, freq: 1500, q: 2.2, when: 0.42 });
+    tone(480, 0.08, { gain: 0.18, slide: 0.7, when: 0.42 });
+  },
   select() {
     if (!enabled) return;
     tone(1400, 0.05, { gain: 0.06 });

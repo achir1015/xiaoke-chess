@@ -5,6 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
 const { Advisor } = require('./advisor');
+const { Updater } = require('./updater');
 
 const APP_TITLE = '小柯機器人象棋遊戲';
 const APP_ROOT = path.join(__dirname, '..', '..');
@@ -34,6 +35,8 @@ function defaults() {
     music: { volume: 0.45, shuffle: false, autoplay: true, track: 0, enabled: true },
     sfx: true,
     view: 'tilt',
+    homeKind: 'full',
+    autoUpdate: true,
     advisor: { apiKeyEnc: '', model: 'claude-opus-5-5', effort: 'low' },
   };
 }
@@ -169,7 +172,7 @@ function handle(ch, fn) { ipcMain.handle(ch, (e, ...a) => fn(...a)); }
 handle('settings:get', () => publicSettings());
 handle('settings:set', (patch) => {
   patch = patch || {};
-  for (const k of ['playerName', 'level', 'aiSide', 'learnFromGames', 'stun', 'sfx', 'view']) if (k in patch) settings[k] = patch[k];
+  for (const k of ['playerName', 'level', 'aiSide', 'learnFromGames', 'stun', 'sfx', 'view', 'homeKind', 'autoUpdate', 'aivai', 'aiSideHalf']) if (k in patch) settings[k] = patch[k];
   if (patch.server) settings.server = { ...settings.server, ...patch.server };
   if (patch.turn) settings.turn = { ...settings.turn, ...patch.turn };
   if (patch.music) settings.music = { ...settings.music, ...patch.music };
@@ -181,7 +184,17 @@ handle('settings:set', (patch) => {
   saveSettings();
   return publicSettings();
 });
-handle('sys:info', () => ({ platform: process.platform, version: app.getVersion(), profile: PROFILE || '', userData: app.getPath('userData') }));
+handle('sys:info', () => ({ platform: process.platform, arch: process.arch, version: app.getVersion(), packaged: app.isPackaged, profile: PROFILE || '', userData: app.getPath('userData'), electron: process.versions.electron }));
+
+// ---------------- 版本更新 ----------------
+const updater = new Updater();
+handle('update:check', () => updater.check());
+ipcMain.handle('update:download', async (e) => {
+  const file = await updater.download((got, total) => { if (!e.sender.isDestroyed()) e.sender.send('update:progress', { got, total }); });
+  return file;
+});
+handle('update:install', (file) => updater.install(file));
+handle('update:openPage', () => { if (updater.info && updater.info.page) shell.openExternal(updater.info.page); else shell.openExternal('https://github.com/achir1015/xiaoke-chess/releases/latest'); });
 handle('sys:askMicrophone', async () => {
   if (process.platform === 'darwin') {
     const st = systemPreferences.getMediaAccessStatus('microphone');
@@ -208,7 +221,7 @@ handle('games:save', (rec) => {
 handle('games:list', () => listGameFiles().map((f) => {
   const g = readGame(f);
   if (!g) return null;
-  return { id: g.id || f.replace(/\.json$/, ''), date: g.date, mode: g.mode, red: g.red, black: g.black, result: g.result, reason: g.reason, plies: (g.moves || []).length, opening: g.opening || '', source: g.source || '' };
+  return { id: g.id || f.replace(/\.json$/, ''), date: g.date, mode: g.mode, kind: g.kind || 'full', red: g.red, black: g.black, result: g.result, reason: g.reason, plies: (g.moves || []).length, opening: g.opening || '', source: g.source || '' };
 }).filter(Boolean));
 handle('games:all', () => listGameFiles().map(readGame).filter(Boolean));
 handle('games:get', (id) => readGame(safeId(id) + '.json'));

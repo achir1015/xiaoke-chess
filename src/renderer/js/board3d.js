@@ -9,8 +9,8 @@ const PR = 0.45;           // 棋子半徑
 const PH = 0.26;           // 棋子厚度
 const FONT = '"DFKai-SB","BiauKai","標楷體","Kaiti TC","STKaiti","KaiTi","Microsoft JhengHei",serif';
 
-const sqX = (sq) => (colOf(sq) - 4) * S;
-const sqZ = (sq) => (rowOf(sq) - 4.5) * S;
+const HS = 1.24;            // 半盤格距
+const HALF_SCALE = 1.2;    // 半盤棋子放大
 
 const RED_INK = '#c8102e';
 const BLACK_INK = '#141414';
@@ -78,6 +78,68 @@ function makeBoardTexture() {
   return { tex, w: W / u * S, h: H / u * S };
 }
 
+// 半盤棋盤：8 行 × 4 列方格，棋子放在格子中央
+function makeHalfBoardTexture() {
+  const u = 260, cols = 8, rows = 4, pad = 120;
+  const W = cols * u + pad * 2, H = rows * u + pad * 2;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const g = cv.getContext('2d');
+  const grd = g.createLinearGradient(0, 0, W, H);
+  grd.addColorStop(0, '#e9c48a'); grd.addColorStop(0.5, '#e2b877'); grd.addColorStop(1, '#d9ab66');
+  g.fillStyle = grd; g.fillRect(0, 0, W, H);
+  for (let i = 0; i < 220; i++) {
+    g.strokeStyle = `rgba(${120 + Math.random() * 40},${70 + Math.random() * 30},${20 + Math.random() * 20},${0.04 + Math.random() * 0.06})`;
+    g.lineWidth = 1 + Math.random() * 4;
+    g.beginPath();
+    const y = Math.random() * H;
+    g.moveTo(0, y);
+    for (let x = 0; x <= W; x += 64) g.lineTo(x, y + Math.sin(x / (120 + Math.random() * 80)) * 12);
+    g.stroke();
+  }
+  g.strokeStyle = '#3b2412';
+  g.lineWidth = 14;
+  g.strokeRect(pad - 22, pad - 22, cols * u + 44, rows * u + 44);
+  g.lineWidth = 6;
+  for (let r = 0; r <= rows; r++) { g.beginPath(); g.moveTo(pad, pad + r * u); g.lineTo(pad + cols * u, pad + r * u); g.stroke(); }
+  for (let c = 0; c <= cols; c++) { g.beginPath(); g.moveTo(pad + c * u, pad); g.lineTo(pad + c * u, pad + rows * u); g.stroke(); }
+  // 座標（A～D 列、1～8 行）
+  g.fillStyle = 'rgba(70,40,15,0.75)';
+  g.font = `bold 54px ${FONT}`;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (let c = 0; c < cols; c++) g.fillText(String(c + 1), pad + c * u + u / 2, pad / 2 - 6);
+  for (let r = 0; r < rows; r++) g.fillText('ABCD'[r], pad / 2 - 6, pad + r * u + u / 2);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  return { tex, w: (W / u) * HS, h: (H / u) * HS };
+}
+
+// 暗子背面
+let backTex = null;
+function pieceBackTexture() {
+  if (backTex) return backTex;
+  const N = 512;
+  const cv = document.createElement('canvas');
+  cv.width = N; cv.height = N;
+  const g = cv.getContext('2d');
+  const rg = g.createRadialGradient(N * 0.42, N * 0.38, N * 0.05, N / 2, N / 2, N / 2);
+  rg.addColorStop(0, '#c98d4e'); rg.addColorStop(0.8, '#a8692f'); rg.addColorStop(1, '#8a5222');
+  g.fillStyle = rg; g.beginPath(); g.arc(N / 2, N / 2, N / 2, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = 'rgba(255,225,160,0.75)'; g.lineWidth = 12;
+  g.beginPath(); g.arc(N / 2, N / 2, N * 0.4, 0, Math.PI * 2); g.stroke();
+  g.lineWidth = 4;
+  g.beginPath(); g.arc(N / 2, N / 2, N * 0.33, 0, Math.PI * 2); g.stroke();
+  g.fillStyle = 'rgba(255,225,160,0.85)';
+  g.font = `900 ${Math.round(N * 0.3)}px ${FONT}`;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText('小柯', N / 2, N / 2 + 6);
+  backTex = new THREE.CanvasTexture(cv);
+  backTex.colorSpace = THREE.SRGBColorSpace;
+  backTex.anisotropy = 8;
+  return backTex;
+}
+
 const faceCache = new Map();
 function pieceFaceTexture(code) {
   if (faceCache.has(code)) return faceCache.get(code);
@@ -123,6 +185,7 @@ export class Board3D {
     this.interactive = true;
     this.anims = [];
     this.captured = [[], []]; // 被吃掉的棋子 mesh（依顏色）
+    this.layout = 'full';
 
     const r = this.renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
     r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -204,8 +267,38 @@ export class Board3D {
     this.scene.add(table);
   }
 
+  X(sq) { return this.layout === 'half' ? ((sq % 8) - 3.5) * HS : (colOf(sq) - 4) * S; }
+  Z(sq) { return this.layout === 'half' ? (((sq / 8) | 0) - 1.5) * HS : (rowOf(sq) - 4.5) * S; }
+  get pieceScale() { return this.layout === 'half' ? HALF_SCALE : 1; }
+
+  // 切換整盤／半盤
+  setLayout(layout) {
+    if (layout === this.layout) return;
+    this.layout = layout;
+    this.boardMesh.visible = layout === 'full';
+    this.halfMesh.visible = layout === 'half';
+    this.boardW = layout === 'half' ? this.halfW : this.fullW;
+    this.boardH = layout === 'half' ? this.halfH : this.fullH;
+    for (const m of [this.selMarker, this.lastFrom, this.lastTo, this.checkMarker, this.hintFrom, this.hintTo]) { m.scale.setScalar(this.pieceScale); m.visible = false; }
+    this.setTargets([]);
+    this.setHint(-1);
+    if (layout === 'half') this.setOrientation(RED);
+    this.fitDistance();
+  }
+
   buildBoard() {
+    const half = makeHalfBoardTexture();
+    this.halfW = half.w; this.halfH = half.h;
+    const hside = new THREE.MeshStandardMaterial({ color: '#b07a3e', roughness: 0.6 });
+    const htop = new THREE.MeshStandardMaterial({ map: half.tex, roughness: 0.55 });
+    this.halfMesh = new THREE.Mesh(new THREE.BoxGeometry(half.w, BOARD_TOP, half.h), [hside, hside, htop, hside, hside, hside]);
+    this.halfMesh.position.y = BOARD_TOP / 2;
+    this.halfMesh.receiveShadow = true;
+    this.halfMesh.castShadow = true;
+    this.halfMesh.visible = false;
+    this.scene.add(this.halfMesh);
     const { tex, w, h } = makeBoardTexture();
+    this.fullW = w; this.fullH = h;
     this.boardW = w; this.boardH = h;
     const side = new THREE.MeshStandardMaterial({ color: '#b07a3e', roughness: 0.6 });
     tex.center.set(0.5, 0.5);
@@ -236,6 +329,8 @@ export class Board3D {
       new THREE.MeshStandardMaterial({ color: '#2a2a2a', roughness: 0.45 }), // 黑方側邊
     ];
     this.faceMat = new Map();
+    this.backMat = new THREE.MeshStandardMaterial({ map: pieceBackTexture(), roughness: 0.45 });
+    this.hiddenMat = new THREE.MeshStandardMaterial({ color: '#8a5222', roughness: 0.5 }); // 暗子側邊不透露顏色
   }
 
   faceMaterial(code) {
@@ -243,18 +338,28 @@ export class Board3D {
     return this.faceMat.get(code);
   }
 
-  makePiece(code) {
+  makePiece(code, faceUp = true) {
     const grp = new THREE.Group();
+    const inner = new THREE.Group(); // 翻面用：繞棋子中心旋轉
+    inner.position.y = PH / 2;
+    grp.add(inner);
     const body = new THREE.Mesh(this.bodyGeo, this.bodyMat[colorOf(code)]);
+    body.position.y = -PH / 2;
     body.castShadow = true; body.receiveShadow = true;
-    grp.add(body);
+    inner.add(body);
     const face = new THREE.Mesh(this.faceGeo, this.faceMaterial(code));
     face.rotation.x = -Math.PI / 2;
-    face.position.y = PH + 0.001;
+    face.position.y = PH / 2 + 0.001;
     face.rotation.z = this.orientation === RED ? 0 : Math.PI;
     face.receiveShadow = true;
-    grp.add(face);
-    grp.userData = { code, face };
+    inner.add(face);
+    const back = new THREE.Mesh(this.faceGeo, this.backMat);
+    back.rotation.x = Math.PI / 2;
+    back.position.y = -PH / 2 - 0.001;
+    inner.add(back);
+    if (!faceUp) { inner.rotation.x = Math.PI; body.material = this.hiddenMat; }
+    grp.scale.setScalar(this.pieceScale);
+    grp.userData = { code, face, inner, body, faceUp };
     this.allPieces.add(grp);
     return grp;
   }
@@ -283,7 +388,7 @@ export class Board3D {
 
   placeMarker(m, sq, y = BOARD_TOP + 0.004) {
     if (sq == null || sq < 0) { m.visible = false; return; }
-    m.position.set(sqX(sq), y, sqZ(sq));
+    m.position.set(this.X(sq), y, this.Z(sq));
     m.visible = true;
   }
 
@@ -304,10 +409,11 @@ export class Board3D {
     // 依視角與畫面比例計算距離，讓整個棋盤（含兩側被吃的棋子）都在畫面內
     const tanV = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
     const tanH = tanV * this.camera.aspect;
-    const needW = 5.75 / tanH;
-    const needH = (this.viewName === 'top' ? 5.75 : 5.95) / tanV;
+    const half = this.layout === 'half';
+    const needW = (half ? this.boardW / 2 + 0.35 : 5.75) / tanH;
+    const needH = (half ? (this.viewName === 'top' ? this.boardH / 2 + 0.4 : this.boardH / 2 + 1.1) : (this.viewName === 'top' ? 5.75 : 5.95)) / tanV;
     const dist = Math.max(needW, needH) * (this.viewName === 'low' ? 1.04 : 1);
-    const target = new THREE.Vector3(0, 0, this.viewName === 'top' ? 0 : 0.6 * dirSign);
+    const target = new THREE.Vector3(0, 0, this.viewName === 'top' || this.layout === 'half' ? 0 : 0.6 * dirSign);
     let dir;
     if (this.viewName === 'top') dir = new THREE.Vector3(0, 1, 0.0001 * dirSign);
     else if (this.viewName === 'low') dir = new THREE.Vector3(0, 0.62, 0.78 * dirSign);
@@ -330,16 +436,16 @@ export class Board3D {
     this.fitDistance();
   }
 
-  setPosition(board) {
+  setPosition(board, up = null) {
     // 移除所有棋子（包含動畫進行中、尚未飛離的被吃棋子）
     for (const g of this.allPieces) this.scene.remove(g);
     this.allPieces.clear();
     this.pieces.clear();
-    for (let sq = 0; sq < 90; sq++) {
+    for (let sq = 0; sq < board.length; sq++) {
       const p = board[sq];
       if (!p) continue;
-      const g = this.makePiece(p);
-      g.position.set(sqX(sq), BOARD_TOP, sqZ(sq));
+      const g = this.makePiece(p, !up || !!up[sq]);
+      g.position.set(this.X(sq), BOARD_TOP, this.Z(sq));
       this.scene.add(g);
       this.pieces.set(sq, g);
     }
@@ -362,7 +468,7 @@ export class Board3D {
       this.pieces.delete(from);
       this.pieces.set(to, g);
       const start = g.position.clone();
-      const end = new THREE.Vector3(sqX(to), BOARD_TOP, sqZ(to));
+      const end = new THREE.Vector3(this.X(to), BOARD_TOP, this.Z(to));
       const dist = start.distanceTo(end);
       const lift = 0.45 + Math.min(0.8, dist * 0.08);
       const t0 = performance.now();
@@ -382,6 +488,28 @@ export class Board3D {
     });
   }
 
+  // 翻開暗子
+  flipPiece(sq, { duration = 520 } = {}) {
+    return new Promise((res) => {
+      const resolve = () => { this.pendingMoves.delete(resolve); res(); };
+      this.pendingMoves.add(resolve);
+      const g = this.pieces.get(sq);
+      if (!g || g.userData.faceUp) { resolve(); return; }
+      const { inner, body } = g.userData;
+      const t0 = performance.now();
+      let swapped = false;
+      this.anims.push((now) => {
+        const k = Math.min(1, (now - t0) / duration);
+        const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+        inner.rotation.x = Math.PI * (1 - e);
+        g.position.y = BOARD_TOP + Math.sin(Math.PI * k) * 0.9;
+        if (!swapped && k > 0.5) { swapped = true; body.material = this.bodyMat[colorOf(g.userData.code)]; }
+        if (k >= 1) { inner.rotation.x = 0; g.position.y = BOARD_TOP; g.userData.faceUp = true; resolve(); return false; }
+        return true;
+      });
+    });
+  }
+
   flyAway(g) {
     const start = g.position.clone();
     const out = start.clone().add(new THREE.Vector3(Math.sign(start.x || 1) * 2.5, 2.2, 0));
@@ -391,7 +519,7 @@ export class Board3D {
       const k = Math.min(1, (now - t0) / dur);
       const e = 1 - Math.pow(1 - k, 3);
       g.position.lerpVectors(start, out, e);
-      g.scale.setScalar(Math.max(0.01, 1 - e));
+      g.scale.setScalar(Math.max(0.01, (1 - e) * this.pieceScale));
       g.rotation.x = e * Math.PI;
       if (k >= 1) { this.scene.remove(g); this.allPieces.delete(g); return false; }
       return true;
@@ -411,7 +539,8 @@ export class Board3D {
       const cap = board && board[sq];
       const m = new THREE.Mesh(cap ? this.capGeo : this.dotGeo, cap ? this.capMat : this.dotMat);
       m.rotation.x = -Math.PI / 2;
-      m.position.set(sqX(sq), BOARD_TOP + 0.005, sqZ(sq));
+      m.position.set(this.X(sq), BOARD_TOP + 0.005, this.Z(sq));
+      m.scale.setScalar(this.pieceScale);
       this.scene.add(m);
       this.targets.push(m);
     }
@@ -428,9 +557,9 @@ export class Board3D {
     this.placeMarker(this.hintFrom, from, BOARD_TOP + 0.008);
     this.placeMarker(this.hintTo, to, BOARD_TOP + 0.008);
     if (this.hintArrow) { this.scene.remove(this.hintArrow); this.hintArrow = null; }
-    if (from == null || from < 0) return;
-    const a = new THREE.Vector3(sqX(from), BOARD_TOP + 0.9, sqZ(from));
-    const b = new THREE.Vector3(sqX(to), BOARD_TOP + 0.9, sqZ(to));
+    if (from == null || from < 0 || from === to) return; // 翻子提示只標格子
+    const a = new THREE.Vector3(this.X(from), BOARD_TOP + 0.9, this.Z(from));
+    const b = new THREE.Vector3(this.X(to), BOARD_TOP + 0.9, this.Z(to));
     const dir = b.clone().sub(a);
     const len = dir.length();
     this.hintArrow = new THREE.ArrowHelper(dir.normalize(), a, len, 0x39ff14, Math.min(0.6, len * 0.35), 0.35);
@@ -448,11 +577,17 @@ export class Board3D {
     this.raycaster.setFromCamera(this.pointer, this.camera);
     // 先找棋子
     const meshes = [];
-    for (const [sq, g] of this.pieces) for (const c of g.children) { c.userData.sq = sq; meshes.push(c); }
+    for (const [sq, g] of this.pieces) g.traverse((c) => { if (c.isMesh) { c.userData.sq = sq; meshes.push(c); } });
     const hit = this.raycaster.intersectObjects(meshes, false)[0];
     if (hit) return hit.object.userData.sq;
     const p = new THREE.Vector3();
     if (!this.raycaster.ray.intersectPlane(this.boardPlane, p)) return -1;
+    if (this.layout === 'half') {
+      const hc = Math.round(p.x / HS + 3.5), hr = Math.round(p.z / HS + 1.5);
+      if (hc < 0 || hc > 7 || hr < 0 || hr > 3) return -1;
+      if (Math.abs(p.x - (hc - 3.5) * HS) > HS / 2 || Math.abs(p.z - (hr - 1.5) * HS) > HS / 2) return -1;
+      return hr * 8 + hc;
+    }
     const c = Math.round(p.x / S + 4), r = Math.round(p.z / S + 4.5);
     if (c < 0 || c > 8 || r < 0 || r > 9) return -1;
     if (Math.hypot(p.x - (c - 4) * S, p.z - (r - 4.5) * S) > 0.5) return -1;

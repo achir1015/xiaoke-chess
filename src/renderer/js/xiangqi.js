@@ -422,9 +422,11 @@ export class Game {
     this.caps = [];       // 該步吃到的棋子 code
     this.quiet = [0];     // 連續未吃子步數
     this.result = null;   // {winner: RED|BLACK|null, reason}
+    this.kind = 'full';
   }
 
   get side() { return this.pos.side; }
+  get turn() { return this.pos.side; } // 輪到的玩家（整盤：玩家索引＝顏色）
   legalMoves() { return this.result ? [] : this.pos.legalMoves(); }
 
   play(m) {

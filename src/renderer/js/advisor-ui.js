@@ -2,6 +2,8 @@
 import { $, h, toast, uid } from './util.js';
 import { Game, Position, iccsToMove, moveToChinese, boardText, RED, BLACK } from './xiangqi.js';
 import { scoreText, isMateScore } from './engine.js';
+import { halfBoardText, isFlip, actFrom, actTo, sqName, pieceLabel } from './banqi.js';
+import { NAMES, typeOf, colorOf as colorOfCode } from './xiangqi.js';
 
 const QUICK = [
   ['現在該怎麼走？', '現在輪到我，該怎麼走比較好？'],
@@ -71,7 +73,36 @@ export class AdvisorPanel {
     return out;
   }
 
+  describeHalf(g, a) {
+    if (isFlip(a)) return `翻開 ${sqName(actFrom(a))} 的暗子`;
+    const p = g.board[actFrom(a)], q = g.board[actTo(a)];
+    return `${pieceLabel(p)} 從 ${sqName(actFrom(a))} 走到 ${sqName(actTo(a))}${q ? '，吃掉' + pieceLabel(q) : ''}`;
+  }
+
+  async buildHalfContext() {
+    const { game: g, mySide } = this.ctx();
+    const myColor = g.pcolor[mySide];
+    const mine = g.turn === mySide;
+    const view = g.publicView();
+    const r = g.result ? null : await this.ctx().analyzeHalf(view);
+    const pool = Object.entries(view.pool).map(([code, n]) => `${pieceLabel(Number(code))}×${n}`).join('、') || '（沒有暗子了）';
+    const recent = g.notes.slice(-12).map((n, i) => `${g.notes.length - Math.min(12, g.notes.length) + i + 1}. ${n}`).join('\n');
+    const text = [
+      '【局面資訊】這是「中國象棋半盤（暗棋）」：4 列 × 8 行，棋子一開始全部蓋著。',
+      '規則：每回合翻開一顆暗子，或把自己的明子上下左右走一步（移動或吃子）。大小：帥 > 士 > 相 > 車 > 馬 > 炮 > 兵，大吃小、同大小可互吃；帥不能吃兵，兵可以吃帥。炮只能走一步到空格，吃子要隔一顆棋子（明暗皆可）打兩格外的明子，可以打任何棋子。吃光對方獲勝。',
+      myColor == null ? `還沒有人翻棋。您是${mySide === 0 ? '先手' : '後手'}，第一個翻棋的人翻出什麼顏色就執什麼顏色。` : `您執${myColor === 0 ? '紅' : '黑'}。`,
+      `現在輪到${mine ? '您' : '對方'}。`,
+      '棋盤（「暗」是還沒翻開的棋子，「．」是空格；列 A～D 由上到下，行 1～8 由左到右）：',
+      halfBoardText(g),
+      `還沒翻開的棋子：${pool}`,
+      recent ? `最近的動作：\n${recent}` : '（還沒有任何動作）',
+      r && r.act >= 0 ? `電腦分析（${mine ? '建議您' : '預測對方'}）：${this.describeHalf(g, r.act)}（搜尋 ${r.depth} 層）` : '（對局已結束）',
+    ].join('\n');
+    return { text, half: true, act: r ? r.act : -1, mine, g, myColor };
+  }
+
   async buildContext() {
+    if (this.ctx().game.kind === 'half') return this.buildHalfContext();
     const { game, mySide } = this.ctx();
     const pos = game.pos;
     const fen = pos.fen();
@@ -108,7 +139,8 @@ export class AdvisorPanel {
     let c;
     try { c = await this.buildContext(); } catch (e) { pending.textContent = '分析失敗：' + e.message; pending.classList.remove('thinking'); return; }
     // 建議著法標在棋盤上
-    if (c.mine && c.lines[0]) this.ctx().showHint(c.lines[0].best);
+    if (c.half) { if (c.mine && c.act >= 0) this.ctx().showHintAct(c.act); }
+    else if (c.mine && c.lines[0]) this.ctx().showHint(c.lines[0].best);
     if (!this.hasKey) {
       pending.classList.remove('thinking');
       pending.textContent = this.offlineAnswer(c);
@@ -148,6 +180,16 @@ export class AdvisorPanel {
   }
 
   offlineAnswer(c) {
+    if (c.half) {
+      const g = c.g;
+      if (c.act < 0) return '這盤已經結束了，可以到「棋譜庫」重播。';
+      const sug = this.describeHalf(g, c.act);
+      if (c.myColor == null) return `建議：${sug}。第一手翻中間的棋子比較靈活，翻出什麼顏色您就執什麼顏色。`;
+      const mineLeft = g.remaining(c.myColor), oppLeft = g.remaining(c.myColor ^ 1);
+      const judge = mineLeft > oppLeft ? '您的棋子比較多，可以穩穩地吃。' : mineLeft < oppLeft ? '對方棋子比較多，小心別讓明子被吃。' : '雙方棋子一樣多。';
+      if (c.mine) return `建議${sug}。\n${judge}\n提醒：翻子前先看看旁邊有沒有對方的大子，翻出小子可能馬上被吃。（棋盤上綠色標記就是建議）`;
+      return `現在是對方走，電腦預測對方會${sug}。\n${judge}`;
+    }
     if (!c.lines.length) return '這盤棋已經結束了，可以到「棋譜庫」重播檢討喔。';
     const best = c.lines[0];
     const zh = this.pvToChinese(c.fen, best.pv, 5);

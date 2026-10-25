@@ -227,3 +227,33 @@ body:not(.mode-net) .net-only { display: none; }
   .game-body { grid-template-columns: 220px 1fr 290px; }
   .turn-banner { font-size: 21px; letter-spacing: 2px; }
 }
+
+/* ---------- v1.1：半盤、AI 對 AI、關於與更新 ---------- */
+.kind-tabs { display: flex; gap: 12px; margin-bottom: 16px; }
+.kindbtn { flex: 1; max-width: 320px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 12px 18px; border-radius: 12px; border-width: 2px; }
+.kindbtn b { font-size: 19px; }
+.kindbtn span { font-size: 13px; color: var(--muted); }
+.kindbtn.on { border-color: var(--gold); background: #4a2f16; }
+.kindbtn.on b { color: var(--gold); }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.two-col > div { display: flex; flex-direction: column; gap: 4px; }
+.credit { margin-top: 18px; }
+.credit-line { color: var(--gold); font-weight: 700; }
+.mv-row.one { grid-template-columns: 30px 1fr; }
+.mv-row.one .mv { white-space: normal; letter-spacing: 0; }
+.half-tip { padding: 0 10px 8px; color: #b6ffcf; }
+.half-tip:empty { display: none; }
+.aivai-only { display: none; }
+body.mode-aivai .aivai-only { display: inline-block; }
+body.mode-aivai #btnHint, body.mode-aivai #btnUndo, body.mode-aivai #btnResign { display: none; }
+.pop.red { color: #ff6b5e; }
+.pop.black { color: #f0f0f0; }
+.hero-piece.small { width: 64px; height: 64px; font-size: 38px; flex: none; }
+.about-head { display: flex; gap: 16px; align-items: center; }
+.about-head h2 { margin: 0; }
+.about { display: flex; flex-direction: column; gap: 8px; min-width: 460px; }
+.upd-status { padding: 10px; border-radius: 8px; background: #1d140c; border: 1px solid var(--line); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.upd-notes { white-space: pre-wrap; max-height: 260px; overflow: auto; background: #1d140c; padding: 10px; border-radius: 8px; font-size: 13px; }
+.upd-box { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 70; background: var(--panel2); border: 1px solid var(--gold); border-radius: 12px; padding: 12px 18px; min-width: 360px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 12px 30px rgba(0,0,0,.6); }
+.upd-bar { height: 10px; background: #1d140c; border-radius: 999px; overflow: hidden; }
+.upd-fill { height: 100%; width: 0; background: linear-gradient(90deg, #e8b84a, #f3d27a); transition: width .2s; }

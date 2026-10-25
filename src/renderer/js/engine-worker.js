@@ -1,6 +1,9 @@
 // AI 搜尋在背景執行緒，避免卡住 3D 畫面
 import { Engine } from './engine.js';
 import { iccsToMove, moveToIccs } from './xiangqi.js';
+import { HalfAI } from './banqi.js';
+
+const halfAI = new HalfAI();
 
 const engine = new Engine();
 
@@ -28,6 +31,10 @@ self.onmessage = (e) => {
         exclude.push(r.best);
       }
       self.postMessage({ id, ok: true, r: out });
+    } else if (cmd === 'half') {
+      // 半盤：只傳公開資訊（暗子不會送進來）
+      const r = halfAI.choose(opts.view, opts);
+      self.postMessage({ id, ok: true, r });
     } else if (cmd === 'clear') {
       engine.clearTT();
       self.postMessage({ id, ok: true, r: true });
