@@ -21,8 +21,8 @@ const check = (name, ok, extra = '') => { if (ok) { pass++; console.log('✔', n
 // 安全守則：只有本 App 在前景、螢幕沒鎖時才操作
 const dump = adb('shell', 'dumpsys', 'window');
 if (/isKeyguardShowing=true/.test(dump)) { console.log('手機鎖著，請先解鎖'); process.exit(2); }
-const fm = /mCurrentFocus=[^\r\n]*/.exec(dump);
-if (!fm || !fm[0].includes('com.achir.xiaokechess')) { console.log('前景不是小柯象棋：', fm && fm[0]); process.exit(2); }
+const focus = dump.match(/mCurrentFocus=[^\r\n]*/g) || [];
+if (!focus.some((f) => f.includes('com.achir.xiaokechess'))) { console.log('前景不是小柯象棋：', focus.join(' ')); process.exit(2); }
 const sock = /@?(webview_devtools_remote_\d+)/.exec(adb('shell', 'cat', '/proc/net/unix'));
 if (!sock) { console.log('找不到 WebView 偵錯通道（要用 python android/build.py debug 建置）'); process.exit(2); }
 execFileSync(ADB, ['-s', SERIAL, 'forward', 'tcp:9333', 'localabstract:' + sock[1]]);

@@ -18,9 +18,9 @@ const check = (name, ok, extra = '') => { if (ok) { pass++; console.log('✔', n
 // 安全守則：只有本 App 在前景、螢幕沒鎖時才操作
 const focus = adb('shell', 'dumpsys', 'window');
 if (/isKeyguardShowing=true/.test(focus)) { console.log('手機鎖著，請先解鎖'); process.exit(2); }
-const fm = /mCurrentFocus=[^\r\n]*/.exec(focus);
-if (!fm || !fm[0].includes('com.achir.xiaokechess')) {
-  console.log('前景不是小柯象棋：', fm && fm[0]);
+const fm = focus.match(/mCurrentFocus=[^\r\n]*/g) || [];
+if (!fm.some((f) => f.includes('com.achir.xiaokechess'))) {
+  console.log('前景不是小柯象棋：', fm.join(' '));
   process.exit(2);
 }
 const sock = /@?(webview_devtools_remote_\d+)/.exec(adb('shell', 'cat', '/proc/net/unix'));
