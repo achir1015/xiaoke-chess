@@ -44,7 +44,7 @@ export class MusicPlayer {
     this.seek = h('input', { type: 'range', min: 0, max: 1000, value: 0, class: 'mu-seek', oninput: () => { if (this.audio.duration) this.audio.currentTime = (this.seek.value / 1000) * this.audio.duration; } });
     this.btnPlay = h('button', { class: 'mu-btn big', title: '播放／暫停', onclick: () => this.toggle() }, icon('play'));
     this.btnShuffle = h('button', { class: 'mu-btn', title: '隨機播放', onclick: () => { this.cfg.shuffle = !this.cfg.shuffle; this.persist(); this.renderState(); } }, icon('shuffle'));
-    this.vol = h('input', { type: 'range', min: 0, max: 100, value: Math.round(this.cfg.volume * 100), class: 'mu-vol', oninput: () => { this.cfg.volume = this.vol.value / 100; this.applyVolume(); this.persist(); } });
+    this.vol = h('input', { type: 'range', min: 0, max: 100, value: Math.round(this.cfg.volume * 100), class: 'mu-vol', oninput: () => this.setVolume(this.vol.value / 100) });
     this.list = h('div', { class: 'mu-list' });
     r.append(
       h('div', { class: 'mu-now' }, h('span', { class: 'mu-disc' }, '♫'), h('div', { class: 'mu-meta' }, this.titleEl, this.timeEl)),
@@ -112,6 +112,15 @@ export class MusicPlayer {
   prev() {
     if (this.audio.currentTime > 4) { this.audio.currentTime = 0; return; }
     this.setTrack(this.idx - 1, this.playing);
+  }
+
+  // 設定音量（0～1），同步所有音量滑桿
+  setVolume(v) {
+    this.cfg.volume = Math.max(0, Math.min(1, Number(v) || 0));
+    this.vol.value = Math.round(this.cfg.volume * 100);
+    this.applyVolume();
+    this.persist();
+    if (this.onVolume) this.onVolume(this.cfg.volume);
   }
 
   // 語音通話時自動降低音量

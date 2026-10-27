@@ -3,7 +3,21 @@ let ctx = null;
 let enabled = true;
 const ac = () => (ctx ||= new (window.AudioContext || window.webkitAudioContext)());
 
+let master = null;
+let volume = 0.8;
+const out = () => {
+  const c = ac();
+  if (!master) { master = c.createGain(); master.gain.value = volume; master.connect(c.destination); }
+  return master;
+};
+
 export function setSfx(on) { enabled = !!on; }
+// 落子音效音量 0～1
+export function setSfxVolume(v) {
+  volume = Math.max(0, Math.min(1, Number(v) || 0));
+  if (master) master.gain.value = volume;
+}
+export const sfxVolume = () => volume;
 
 function tone(freq, dur, { type = 'sine', gain = 0.3, attack = 0.002, decay = dur, when = 0, slide = 0 } = {}) {
   const c = ac();
@@ -16,7 +30,7 @@ function tone(freq, dur, { type = 'sine', gain = 0.3, attack = 0.002, decay = du
   g.gain.setValueAtTime(0, t);
   g.gain.linearRampToValueAtTime(gain, t + attack);
   g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
-  o.connect(g).connect(c.destination);
+  o.connect(g).connect(out());
   o.start(t); o.stop(t + dur + 0.05);
 }
 
@@ -32,7 +46,7 @@ function noise(dur, { gain = 0.3, freq = 2000, q = 1, when = 0 } = {}) {
   const f = c.createBiquadFilter();
   f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q;
   const g = c.createGain(); g.gain.value = gain;
-  src.connect(f).connect(g).connect(c.destination);
+  src.connect(f).connect(g).connect(out());
   src.start(t);
 }
 

@@ -326,3 +326,20 @@ body.mode-aivai #btnHint, body.mode-aivai #btnUndo, body.mode-aivai #btnResign {
 .pf-slot.small img, .pf-slot.small .pf-empty { width: 84px; height: 105px; }
 .pf-empty { display: grid; place-items: center; border: 2px dashed var(--line); color: var(--muted); }
 .pf-hint { color: #ff8a80; font-size: 13px; text-align: center; }
+
+/* ---------- v1.2.1：日期時間、直立音量滑桿 ---------- */
+.topbar { height: 78px; padding-right: 64px; }
+.banner-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.banner-wrap .turn-banner { width: 100%; padding: 3px 12px; font-size: 24px; }
+.clock { font-size: 13.5px; color: #e8d5a8; letter-spacing: 1px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.vol { position: relative; display: flex; align-items: center; }
+.vol-icon { white-space: nowrap; }
+.vol-pop { display: none; position: absolute; top: 0; z-index: 40; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px 10px; background: var(--panel2); border: 1px solid var(--gold); border-radius: 12px; box-shadow: 0 10px 26px rgba(0,0,0,.6); }
+.vol:hover .vol-pop, .vol:focus-within .vol-pop { display: flex; }
+.vol-pop.left { right: 100%; }
+.vol-pop.right { left: 100%; }
+.vslider { writing-mode: vertical-lr; direction: rtl; width: 26px; height: 150px; margin: 2px 0; accent-color: var(--gold); padding: 0; cursor: pointer; }
+.vol-cap { font-size: 12px; color: var(--muted); }
+.vol-val { font-size: 14px; font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
+.vol-hint { font-size: 11px; color: var(--muted); line-height: 1.2; text-align: center; }
+@media (max-width: 1280px) { .banner-wrap .turn-banner { font-size: 20px; } .clock { font-size: 12px; } }

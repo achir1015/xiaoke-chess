@@ -19,7 +19,10 @@
   <section id="scr-game" class="screen">
     <header class="topbar">
       <button id="btnHome" class="ghost" title="回首頁">⟵ 首頁</button>
-      <div id="turnBanner" class="turn-banner">—</div>
+      <div class="banner-wrap">
+        <div id="clock" class="clock">西元</div>
+        <div id="turnBanner" class="turn-banner">—</div>
+      </div>
       <div class="top-right">
         <div class="viewgroup">
           <button id="viewTilt" class="viewbtn on" title="斜角視角">斜視</button>
@@ -27,7 +30,24 @@
           <button id="viewLow" class="viewbtn" title="低角度立體">立體</button>
           <button id="btnFlip" class="viewbtn" title="翻轉棋盤方向">⇅</button>
         </div>
-        <button id="miniMusic" class="ghost mini-music">♫ 背景音樂</button>
+        <div class="vol sfx-vol">
+          <div class="vol-pop left" title="落子音效音量：往上大聲、往下小聲">
+            <span class="vol-cap">音效</span>
+            <span id="sfxVolVal" class="vol-val">80</span>
+            <input id="sfxVol" class="vslider" type="range" min="0" max="100" value="80" aria-label="落子音效音量">
+            <span class="vol-hint">▲大<br>▼小</span>
+          </div>
+          <button id="btnSfx" class="ghost vol-icon" title="落子音效（按一下靜音／恢復）">🔔 落子</button>
+        </div>
+        <div class="vol music-vol">
+          <button id="miniMusic" class="ghost mini-music" title="背景音樂（按一下播放／暫停）">♫ 背景音樂</button>
+          <div class="vol-pop right" title="背景音樂音量：往上大聲、往下小聲">
+            <span class="vol-cap">音樂</span>
+            <span id="musicVolVal" class="vol-val">45</span>
+            <input id="musicVol" class="vslider" type="range" min="0" max="100" value="45" aria-label="背景音樂音量">
+            <span class="vol-hint">▲大<br>▼小</span>
+          </div>
+        </div>
       </div>
     </header>
     <div class="game-body">

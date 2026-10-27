@@ -8,7 +8,7 @@ import { Board3D } from './board3d.js';
 import { GameLink, PROTOCOL } from './net.js';
 import { MusicPlayer } from './music.js';
 import { AdvisorPanel } from './advisor-ui.js';
-import { sfx, setSfx } from './sfx.js';
+import { sfx, setSfx, setSfxVolume, sfxVolume } from './sfx.js';
 import { loadPortraits, portraitUrl, labelOf, validProfile, randomProfile, pickProfile } from './portraits.js';
 
 const SIDE_NAME = ['紅方', '黑方'];
@@ -104,6 +104,9 @@ async function init() {
     document.addEventListener('pointerdown', start);
   }
   music.renderState();
+  initVolumeControls();
+  tickDateTime();
+  setInterval(tickDateTime, 1000);
 
   advisor = new AdvisorPanel($('#advisorPanel'), () => {
     const g = S.mode === 'replay' ? S.replay.game : S.game;
@@ -279,6 +282,41 @@ function renderHome() {
     h('div', { class: 'credit muted small' }, `v${S.info.version}　${CREDIT}`),
   );
   if (!half) renderLearnStat();
+}
+
+// ---------------- 日期時間、音量 ----------------
+function tickDateTime() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  const el = $('#clock');
+  if (el) el.textContent = `西元 ${d.getFullYear()} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日（星期${'日一二三四五六'[d.getDay()]}）${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+function initVolumeControls() {
+  // 落子音效：滑桿在圖示左側，往上大聲
+  const sv = $('#sfxVol'), svv = $('#sfxVolVal');
+  let lastSfx = S.settings.sfxVolume > 0 ? S.settings.sfxVolume : 0.8;
+  const applySfx = (v, save = true) => {
+    setSfxVolume(v);
+    sv.value = Math.round(v * 100);
+    svv.textContent = Math.round(v * 100);
+    $('#btnSfx').textContent = v > 0 ? '🔔 落子' : '🔕 落子';
+    if (v > 0) lastSfx = v;
+    if (save) { clearTimeout(applySfx.t); applySfx.t = setTimeout(() => saveSettings({ sfxVolume: v }), 400); }
+  };
+  applySfx(S.settings.sfxVolume ?? 0.8, false);
+  let lastPreview = 0;
+  sv.oninput = () => {
+    applySfx(sv.value / 100);
+    if (Date.now() - lastPreview > 180) { lastPreview = Date.now(); sfx.resume(); sfx.move(); } // 試聽
+  };
+  $('#btnSfx').onclick = () => { applySfx(sfxVolume() > 0 ? 0 : lastSfx); if (sfxVolume() > 0) { sfx.resume(); sfx.move(); } };
+  // 背景音樂：滑桿在圖示右側，往上大聲
+  const mv = $('#musicVol'), mvv = $('#musicVolVal');
+  const showMusic = (v) => { mv.value = Math.round(v * 100); mvv.textContent = Math.round(v * 100); };
+  showMusic(music.cfg.volume);
+  music.onVolume = showMusic;
+  mv.oninput = () => music.setVolume(mv.value / 100);
 }
 
 // 首頁上的「我的頭像＋AI 軍師」
@@ -1542,12 +1580,16 @@ async function openSettings() {
   f.turnUser = h('input', { value: s.turn.username, placeholder: '帳號' });
   f.turnPass = h('input', { type: 'password', value: s.turn.credential, placeholder: '密碼' });
   const testOut = h('div', { class: 'muted small' });
+  const updStatus = h('div', { class: 'upd-status muted small', id: 'setUpdStatus' }, '按「檢查更新」查詢 GitHub 上的最新版本');
   const body = h('div', { class: 'settings' },
     h('h4', {}, '一般'),
     row('我的暱稱', f.name),
     row('音效', h('label', { class: 'chk' }, f.sfx, ' 落子、吃子、翻子、將軍音效')),
     row('背景音樂', h('label', { class: 'chk' }, f.autoplay, ' 開啟程式後自動播放')),
     row('版本更新', h('label', { class: 'chk' }, f.autoUpdate, ' 開啟程式時自動檢查新版本')),
+    row(`目前版本 v${S.info.version}`, h('div', { class: 'inline' },
+      h('button', { id: 'btnCheckUpdate', onclick: () => { updStatus.textContent = '正在檢查是否有新版本…'; checkUpdate(true, updStatus); } }, '🔄 檢查更新'),
+      updStatus)),
     row('頭像與 AI 軍師', h('button', { onclick: async () => { await ensureProfile(true); } }, '更換頭像與軍師')),
     row('軍師代打的棋力', f.proxyLevel, '暫時離開時，AI 軍師用這個難度替您下棋。'),
     h('h4', {}, 'AI 軍師（Claude）'),
