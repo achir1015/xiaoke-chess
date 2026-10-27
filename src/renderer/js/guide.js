@@ -43,7 +43,10 @@ class MiniBoard {
     this.kind = kind;
     this.host.innerHTML = '';
     const half = kind === 'half';
-    const W = half ? 700 : 520, H = half ? 380 : 590;
+    // 手機直立：半盤改成直的，棋子才不會太小
+    this.vertical = half && this.host.clientWidth > 0 && this.host.clientWidth < 560;
+    const V = this.vertical;
+    const W = half ? (V ? 380 : 700) : 520, H = half ? (V ? 720 : 380) : 590;
     this.svg = svg('svg', { viewBox: `0 0 ${W} ${H}`, class: 'gb-svg' });
     const bg = svg('rect', { x: 2, y: 2, width: W - 4, height: H - 4, rx: 16, class: 'gb-bg' });
     this.svg.append(bg);
@@ -54,12 +57,14 @@ class MiniBoard {
     this.top = svg('g');
     this.svg.append(this.zones, this.grid, this.marks, this.layer, this.top);
     if (half) {
-      this.cell = 82; this.ox = 22; this.oy = 26;
+      this.cell = 82; this.ox = V ? 26 : 22; this.oy = 26;
       const line = (x1, y1, x2, y2) => this.grid.append(svg('line', { x1, y1, x2, y2 }));
-      for (let r = 0; r <= 4; r++) line(this.ox, this.oy + r * this.cell, this.ox + 8 * this.cell, this.oy + r * this.cell);
-      for (let c = 0; c <= 8; c++) line(this.ox + c * this.cell, this.oy, this.ox + c * this.cell, this.oy + 4 * this.cell);
-      for (let c = 0; c < 8; c++) this.grid.append(svg('text', { x: this.ox + c * this.cell + this.cell / 2, y: this.oy - 8, class: 'gb-coord' }, String(c + 1)));
-      for (let r = 0; r < 4; r++) this.grid.append(svg('text', { x: this.ox - 12, y: this.oy + r * this.cell + this.cell / 2 + 6, class: 'gb-coord' }, 'ABCD'[r]));
+      const nx = V ? 4 : 8, ny = V ? 8 : 4;
+      for (let r = 0; r <= ny; r++) line(this.ox, this.oy + r * this.cell, this.ox + nx * this.cell, this.oy + r * this.cell);
+      for (let c = 0; c <= nx; c++) line(this.ox + c * this.cell, this.oy, this.ox + c * this.cell, this.oy + ny * this.cell);
+      const colLab = V ? 'ABCD' : '12345678', rowLab = V ? '12345678' : 'ABCD';
+      for (let c = 0; c < nx; c++) this.grid.append(svg('text', { x: this.ox + c * this.cell + this.cell / 2, y: this.oy - 8, class: 'gb-coord' }, colLab[c]));
+      for (let r = 0; r < ny; r++) this.grid.append(svg('text', { x: this.ox - 13, y: this.oy + r * this.cell + this.cell / 2 + 6, class: 'gb-coord' }, rowLab[r]));
       this.R = 32;
     } else {
       this.cell = 56; this.ox = 36; this.oy = 36;
@@ -86,13 +91,15 @@ class MiniBoard {
   }
 
   xy(sq) {
+    if (this.kind === 'half' && this.vertical) return [this.ox + ((sq / 8) | 0) * this.cell + this.cell / 2, this.oy + (sq % 8) * this.cell + this.cell / 2];
     if (this.kind === 'half') return [this.ox + (sq % 8) * this.cell + this.cell / 2, this.oy + ((sq / 8) | 0) * this.cell + this.cell / 2];
     return [this.ox + colOf(sq) * this.cell, this.oy + rowOf(sq) * this.cell];
   }
 
   pick(x, y) {
     if (this.kind === 'half') {
-      const c = Math.floor((x - this.ox) / this.cell), r = Math.floor((y - this.oy) / this.cell);
+      let c = Math.floor((x - this.ox) / this.cell), r = Math.floor((y - this.oy) / this.cell);
+      if (this.vertical) [c, r] = [r, c];
       return c >= 0 && c < 8 && r >= 0 && r < 4 ? r * 8 + c : -1;
     }
     const c = Math.round((x - this.ox) / this.cell), r = Math.round((y - this.oy) / this.cell);
@@ -223,15 +230,18 @@ class Narrator {
     this.voice = pref.map((re) => vs.find((v) => re.test(v.name))).find(Boolean)
       || vs.find((v) => /zh[-_]TW/i.test(v.lang)) || vs.find((v) => /zh[-_]HK/i.test(v.lang)) || vs.find((v) => /^zh/i.test(v.lang)) || null;
   }
-  get available() { if (!this.voice) this.pick(); return 'speechSynthesis' in window && !!this.voice; }
-  stop() { if ('speechSynthesis' in window) speechSynthesis.cancel(); }
-  pause() { if ('speechSynthesis' in window) speechSynthesis.pause(); }
-  resume() { if ('speechSynthesis' in window) speechSynthesis.resume(); }
+  get native() { return window.xk && window.xk.tts && window.xk.tts.available() ? window.xk.tts : null; }
+  get available() { if (this.native) return true; if (!this.voice) this.pick(); return 'speechSynthesis' in window && !!this.voice; }
+  get voiceName() { return this.native ? this.native.voiceName() : this.voice ? this.voice.name : ''; }
+  stop() { if (this.native) this.native.stop(); else if ('speechSynthesis' in window) speechSynthesis.cancel(); }
+  pause() { if (this.native) this.native.stop(); else if ('speechSynthesis' in window) speechSynthesis.pause(); }
+  resume() { if (!this.native && 'speechSynthesis' in window) speechSynthesis.resume(); }
   // 說完才 resolve；沒有語音時依字數等待
   speak(text) {
     const plain = String(text).replace(/[「」（）()]/g, ' ');
     const est = 700 + plain.length * 210 / this.rate;
     if (!this.on || !this.available) return sleep(Math.min(9000, 900 + plain.length * 95));
+    if (this.native) { this.native.stop(); return this.native.speak(plain, this.rate); }
     return new Promise((resolve) => {
       this.stop();
       const u = new SpeechSynthesisUtterance(plain);
@@ -436,7 +446,7 @@ export class Guide {
     const ok = this.narr.available;
     this.btnVoice.textContent = !ok ? '🔇 無語音' : this.narr.on ? '🔊 語音解說：開' : '🔈 語音解說：關';
     this.btnVoice.disabled = !ok;
-    this.btnVoice.title = ok ? `使用語音：${this.narr.voice.name}` : '這台電腦沒有中文語音，解說會以文字顯示';
+    this.btnVoice.title = ok ? `使用語音：${this.narr.voiceName}` : '這台裝置沒有中文語音，解說會以文字顯示';
   }
 
   toggleVoice() {

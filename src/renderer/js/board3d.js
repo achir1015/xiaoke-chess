@@ -208,6 +208,7 @@ export class Board3D {
     this.controls.maxDistance = 26;
     this.controls.maxPolarAngle = Math.PI * 0.42;
     this.controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+    this.controls.touches = { ONE: null, TWO: THREE.TOUCH.DOLLY_ROTATE }; // 手機：單指點棋子、雙指縮放旋轉
     this.controls.target.set(0, 0, 0.3);
 
     // 燈光
@@ -282,6 +283,7 @@ export class Board3D {
     for (const m of [this.selMarker, this.lastFrom, this.lastTo, this.checkMarker, this.hintFrom, this.hintTo]) { m.scale.setScalar(this.pieceScale); m.visible = false; }
     this.setTargets([]);
     this.setHint(-1);
+    this.lastYaw = null;
     if (layout === 'half') this.setOrientation(RED);
     this.fitDistance();
   }
@@ -350,16 +352,17 @@ export class Board3D {
     const face = new THREE.Mesh(this.faceGeo, this.faceMaterial(code));
     face.rotation.x = -Math.PI / 2;
     face.position.y = PH / 2 + 0.001;
-    face.rotation.z = this.orientation === RED ? 0 : Math.PI;
+    face.rotation.z = this.yaw;
     face.receiveShadow = true;
     inner.add(face);
     const back = new THREE.Mesh(this.faceGeo, this.backMat);
     back.rotation.x = Math.PI / 2;
+    back.rotation.z = this.yaw;
     back.position.y = -PH / 2 - 0.001;
     inner.add(back);
     if (!faceUp) { inner.rotation.x = Math.PI; body.material = this.hiddenMat; }
     grp.scale.setScalar(this.pieceScale);
-    grp.userData = { code, face, inner, body, faceUp };
+    grp.userData = { code, face, back, inner, body, faceUp };
     this.allPieces.add(grp);
     return grp;
   }
@@ -403,21 +406,43 @@ export class Board3D {
     this.fitDistance();
   }
 
+  // 鏡頭的方位角
+  get yaw() {
+    if (this.layout === 'half') {
+      // 轉直之後棋子比較大就轉（直立手機的棋盤區常常接近正方形）
+      const a = this.camera.aspect, w = this.halfW, hh = this.halfH;
+      const flat = Math.min(a / w, 1 / hh), upright = Math.min(a / hh, 1 / w);
+      return upright > flat * 1.04 ? Math.PI / 2 : 0;
+    }
+    return this.orientation === RED ? 0 : Math.PI;
+  }
+
+  applyYaw() {
+    const y = this.yaw;
+    if (y === this.lastYaw) return;
+    this.lastYaw = y;
+    if (this.boardTex) this.boardTex.rotation = this.layout === 'full' && this.orientation !== RED ? Math.PI : 0;
+    for (const g of this.allPieces) { g.userData.face.rotation.z = y; if (g.userData.back) g.userData.back.rotation.z = y; }
+  }
+
   fitDistance() {
     if (!this.viewName) return;
-    const dirSign = this.orientation === RED ? 1 : -1;
+    this.applyYaw();
+    const yaw = this.yaw;
+    const sideways = Math.abs(Math.sin(yaw)) > 0.5;
     // 依視角與畫面比例計算距離，讓整個棋盤（含兩側被吃的棋子）都在畫面內
     const tanV = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2));
     const tanH = tanV * this.camera.aspect;
     const half = this.layout === 'half';
-    const needW = (half ? this.boardW / 2 + 0.35 : 5.75) / tanH;
-    const needH = (half ? (this.viewName === 'top' ? this.boardH / 2 + 0.4 : this.boardH / 2 + 1.1) : (this.viewName === 'top' ? 5.75 : 5.95)) / tanV;
+    const bw = sideways ? this.boardH : this.boardW, bh = sideways ? this.boardW : this.boardH;
+    const needW = (half ? bw / 2 + 0.35 : 5.75) / tanH;
+    const needH = (half ? (this.viewName === 'top' ? bh / 2 + 0.4 : bh / 2 + 1.1) : (this.viewName === 'top' ? 5.75 : 5.95)) / tanV;
     const dist = Math.max(needW, needH) * (this.viewName === 'low' ? 1.04 : 1);
-    const target = new THREE.Vector3(0, 0, this.viewName === 'top' || this.layout === 'half' ? 0 : 0.6 * dirSign);
-    let dir;
-    if (this.viewName === 'top') dir = new THREE.Vector3(0, 1, 0.0001 * dirSign);
-    else if (this.viewName === 'low') dir = new THREE.Vector3(0, 0.62, 0.78 * dirSign);
-    else dir = new THREE.Vector3(0, 0.83, 0.56 * dirSign);
+    const sx = Math.sin(yaw), sz = Math.cos(yaw);
+    const off = this.viewName === 'top' || this.layout === 'half' ? 0 : 0.6;
+    const target = new THREE.Vector3(sx * off, 0, sz * off);
+    const [up, out] = this.viewName === 'top' ? [1, 0.0001] : this.viewName === 'low' ? [0.62, 0.78] : [0.83, 0.56];
+    const dir = new THREE.Vector3(sx * out, up, sz * out);
     dir.normalize();
     this.camera.position.copy(target).addScaledVector(dir, dist);
     this.controls.target.copy(target);
@@ -430,8 +455,8 @@ export class Board3D {
 
   setOrientation(side) {
     this.orientation = side;
-    if (this.boardTex) this.boardTex.rotation = side === RED ? 0 : Math.PI;
-    for (const g of this.pieces.values()) g.userData.face.rotation.z = side === RED ? 0 : Math.PI;
+    this.lastYaw = null;
+    this.applyYaw();
     this.layoutCaptured();
     this.fitDistance();
   }

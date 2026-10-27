@@ -4,3 +4,7 @@ e2e/out/
 __pycache__/
 *.log
 assets/portraits/_sheet.html
+mobile/www/
+android/build/
+android/local.properties
+android/*.jks

@@ -1,7 +1,7 @@
 {
   "name": "xiaoke-chess",
   "productName": "小柯機器人象棋遊戲",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "小柯機器人象棋遊戲：3D 中國象棋整盤與半盤（與 AI、遠端真人＋語音、AI 對 AI、背景音樂、AI 軍師、學習棋譜、自動更新）",
   "main": "src/main/main.js",
   "author": {
@@ -16,7 +16,9 @@
     "music": "python scripts/gen_music.py",
     "dist:win": "electron-builder --win nsis portable --x64 --publish never",
     "dist:mac": "electron-builder --mac dmg --publish never",
-    "portraits": "node scripts/gen_portraits.mjs"
+    "portraits": "node scripts/gen_portraits.mjs",
+    "mobile": "node scripts/build-mobile.mjs",
+    "android": "python android/build.py"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.3.0",
@@ -43,7 +45,9 @@
       "!node_modules/**/test/**",
       "!node_modules/**/*.map",
       "!node_modules/**/*.d.ts",
-      "!node_modules/**/*.d.mts"
+      "!node_modules/**/*.d.mts",
+      "!mobile/**",
+      "!android/**"
     ],
     "win": {
       "target": "nsis",
@@ -87,6 +91,7 @@
   "devDependencies": {
     "electron": "^33.4.11",
     "electron-builder": "^25.1.8",
+    "esbuild": "^0.24.2",
     "peer": "^1.0.2",
     "playwright-core": "^1.48.2"
   }

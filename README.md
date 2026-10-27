@@ -5,7 +5,7 @@
 <img width="1913" height="1079" alt="image" src="https://github.com/user-attachments/assets/1bdc61df-38ea-45a4-ab30-92b28585c57e" />
 <img width="622" height="941" alt="image" src="https://github.com/user-attachments/assets/8e6b601a-a85f-4107-b2a3-64815e55a54c" />
 
-3D 立體中國象棋桌面遊戲（Windows 11 優先，MacBook Pro 次之）。從「小柯機器人遠端連線」的構想延伸而來，沿用同一套 WebRTC 點對點連線。
+3D 立體中國象棋遊戲：Windows 11、MacBook Pro 桌面版，以及 Android 手機版（直立）。從「小柯機器人遠端連線」的構想延伸而來，沿用同一套 WebRTC 點對點連線。
 
 ## 功能
 
@@ -35,6 +35,15 @@
 - 炮只能走一步到空格；吃子時要隔一顆棋子（明暗皆可）打兩格外的明子，可以打任何棋子。
 - 吃光對方的棋子獲勝。本程式另外補上：輪到的一方無子可動判負；連續 80 步沒有吃子也沒有翻子判和。
 
+## Android 手機版（v1.4.0 起）
+
+到 [Releases](https://github.com/achir1015/xiaoke-chess/releases/latest) 下載 `XiaokeChess-版本-android.apk`，在手機上開啟安裝（第一次要允許「安裝未知應用程式」）。需要 Android 8.0 以上。
+
+- **直立畫面**：手機多半直著拿，單手就能下棋；整盤棋盤九路寬剛好佔滿螢幕寬度，半盤（4×8）自動轉成直的。
+- 桌面版功能都有：整盤／半盤、與 AI、與真人遠端（可和電腦版互連）、AI 對 AI、語音通話、20 首背景音樂、AI 軍師與軍師代打、頭像、遊戲說明（手機內建中文語音）、棋譜庫、檢查更新。
+- 著法、軍師、音樂放在下方抽屜，點分頁拉起；兩指拖曳旋轉、捏合縮放棋盤；返回鍵會先關掉面板與視窗。
+- 更新：在「關於與更新」按檢查更新，下載後由 Android 安裝程式覆蓋安裝（資料保留）。
+
 ## 版本更新
 
 程式開啟時會自動檢查 GitHub 上的新版本（也可在首頁「關於與更新」手動檢查）：
@@ -59,6 +68,10 @@ npm run music        # 重新產生 20 首背景音樂（需要 Python numpy/sci
 npm run portraits    # 重新產生 60 張頭像（SVG）
 node e2e/net-proxy.mjs # 遠端對賽頭像互通與軍師代打測試
 node e2e/guide.mjs   # 遊戲說明（動畫、語音、練習）測試
+npm run mobile       # 產生手機版網頁（mobile/www）
+node e2e/mobile.mjs  # 手機版網頁測試（Chrome 手機模擬）
+python android/build.py            # 建置 Android APK（不用 Gradle；需 JDK 17、Android SDK）
+python android/build.py debug install  # 除錯版裝到手機，再用 node e2e/phone.mjs 實機測試
 ```
 
 ## 架構

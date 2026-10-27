@@ -124,6 +124,7 @@ async function init() {
   advisor.setHasKey(S.settings.advisor.hasKey);
 
   bindUI();
+  if (document.documentElement.classList.contains('mobile')) setupMobile();
   renderHome();
   showScreen('home');
   if (!validProfile(S.settings.profile)) ensureProfile(); // 第一次使用：必須先選頭像（不阻擋其他初始化）
@@ -287,6 +288,52 @@ function renderHome() {
   if (!half) renderLearnStat();
 }
 
+// ---------------- 手機版（直立）----------------
+// 著法紀錄、軍師、對話、音樂收進底部的抽屜；點分頁打開、再點一次收起
+function setupMobile() {
+  document.body.classList.add('is-mobile');
+  const tabs = $('.right .tabs');
+  const movesTab = h('button', { class: 'tab', 'data-tab': 'moves' }, '📜 著法');
+  tabs.prepend(movesTab);
+  const pane = h('div', { id: 'pane-moves', class: 'tabpane' });
+  pane.append($('.movebox'));
+  $('#pane-advisor').before(pane);
+  $$('.tab').forEach((t) => {
+    t.onclick = () => {
+      const open = document.body.classList.contains('sheet-open');
+      const same = t.classList.contains('on');
+      selectTab(t.dataset.tab);
+      document.body.classList.toggle('sheet-open', !(open && same));
+    };
+  });
+  // 音量：點圖示打開直立滑桿（手機沒有滑鼠移上去的動作）
+  const toggleVol = (btn) => (e) => {
+    e.stopPropagation();
+    const v = btn.closest('.vol');
+    const was = v.classList.contains('open');
+    $$('.vol.open').forEach((x) => x.classList.remove('open'));
+    if (!was) v.classList.add('open');
+    $('#musicPlay').textContent = music.playing ? '暫停' : '播放';
+  };
+  $('#btnSfx').onclick = toggleVol($('#btnSfx'));
+  $('#miniMusic').onclick = toggleVol($('#miniMusic'));
+  $('#sfxMute').onclick = (e) => { e.stopPropagation(); $('#btnSfx').dispatchEvent(new CustomEvent('mute')); };
+  $('#musicPlay').onclick = (e) => { e.stopPropagation(); music.toggle(); $('#musicPlay').textContent = music.playing ? '暫停' : '播放'; };
+  $$('.vol-pop').forEach((p) => p.addEventListener('click', (e) => e.stopPropagation()));
+  document.addEventListener('click', () => $$('.vol.open').forEach((x) => x.classList.remove('open')));
+  // 手機返回鍵：先關對話框、抽屜，再回上一頁
+  window.__xkcBack = () => {
+    const m = $('.modal-back');
+    if (m) { const btns = m.querySelectorAll('.modal-btns button'); (btns[0] || btns[btns.length - 1]).click(); return true; }
+    if (document.body.classList.contains('sheet-open')) { document.body.classList.remove('sheet-open'); return true; }
+    if ($$('.vol.open').length) { $$('.vol.open').forEach((x) => x.classList.remove('open')); return true; }
+    if (S.screen === 'game') { leaveGame(); return true; }
+    if (S.screen === 'guide') { $('#scr-guide .gd-head button').click(); return true; }
+    if (S.screen === 'records') { showScreen('home'); return true; }
+    return false;
+  };
+}
+
 // ---------------- 日期時間、音量 ----------------
 function tickDateTime() {
   const d = new Date();
@@ -313,7 +360,9 @@ function initVolumeControls() {
     applySfx(sv.value / 100);
     if (Date.now() - lastPreview > 180) { lastPreview = Date.now(); sfx.resume(); sfx.move(); } // 試聽
   };
-  $('#btnSfx').onclick = () => { applySfx(sfxVolume() > 0 ? 0 : lastSfx); if (sfxVolume() > 0) { sfx.resume(); sfx.move(); } };
+  const muteToggle = () => { applySfx(sfxVolume() > 0 ? 0 : lastSfx); if (sfxVolume() > 0) { sfx.resume(); sfx.move(); } };
+  $('#btnSfx').onclick = muteToggle;
+  $('#btnSfx').addEventListener('mute', muteToggle);
   // 背景音樂：滑桿在圖示右側，往上大聲
   const mv = $('#musicVol'), mvv = $('#musicVolVal');
   const showMusic = (v) => { mv.value = Math.round(v * 100); mvv.textContent = Math.round(v * 100); };
@@ -1565,13 +1614,14 @@ async function startUpdate(info) {
     const file = await xk.update.download();
     off();
     if (S.game && ['ai', 'net', 'aivai'].includes(S.mode)) await saveUnfinished();
-    txt.textContent = info.flavor === 'mac' ? '下載完成，正在開啟安裝檔…' : '下載完成，正在安裝，程式會自動重新開啟…';
+    txt.textContent = info.flavor === 'mac' ? '下載完成，正在開啟安裝檔…' : info.flavor === 'android' ? '下載完成，正在開啟安裝畫面…' : '下載完成，正在安裝，程式會自動重新開啟…';
     const r = await xk.update.install(file);
     if (r.manual) {
       box.remove();
       await modal('請完成安裝', h('div', {},
-        h('p', {}, '新版安裝檔已開啟（也放在「下載」資料夾）。'),
-        h('p', {}, info.flavor === 'mac' ? '請先結束本程式，再把「小柯機器人象棋遊戲」拖到「應用程式」資料夾覆蓋舊版。' : '請依照畫面指示完成安裝。')));
+        h('p', {}, info.flavor === 'android' ? '新版 APK 已下載。' : '新版安裝檔已開啟（也放在「下載」資料夾）。'),
+        h('p', {}, info.flavor === 'mac' ? '請先結束本程式，再把「小柯機器人象棋遊戲」拖到「應用程式」資料夾覆蓋舊版。'
+          : info.flavor === 'android' ? '請在手機跳出的安裝畫面按「更新」。如果出現「為了安全，手機不允許安裝」，請按「設定」允許本 App 安裝，再回來按一次更新。' : '請依照畫面指示完成安裝。')));
     }
   } catch (e) {
     off();

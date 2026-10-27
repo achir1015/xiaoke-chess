@@ -1,0 +1,134 @@
+/* =========================================================
+   手機直立版（Android）：html.mobile
+   只在手機上生效；桌面版外觀不受影響。
+   ========================================================= */
+.m-only { display: none; }
+html.mobile .m-only { display: inline-block; }
+html.mobile, html.mobile body { height: 100%; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+html.mobile body { font-size: 15px; }
+html.mobile button { padding: 7px 10px; }
+html.mobile input, html.mobile select, html.mobile textarea { font-size: 16px; }
+
+/* 首頁 */
+html.mobile .home { padding: 12px 12px 24px; }
+html.mobile .home-hero { flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+html.mobile .hero-piece { width: 54px; height: 54px; font-size: 32px; box-shadow: 0 0 0 3px #b3242c, 0 6px 14px rgba(0,0,0,.5), inset 0 0 0 4px #f3dcae, inset 0 0 0 6px #c8102e; }
+html.mobile .home-hero h1 { font-size: 21px; letter-spacing: 1px; }
+html.mobile .home-hero p { font-size: 13px; }
+html.mobile .my-profile { margin-left: 0; width: 100%; order: 3; }
+html.mobile .hero-name { order: 4; width: 100%; flex-direction: row; align-items: center; }
+html.mobile .name-in { flex: 1; width: auto; }
+html.mobile .kind-tabs { gap: 8px; margin-bottom: 12px; }
+html.mobile .kindbtn { padding: 8px 10px; }
+html.mobile .kindbtn b { font-size: 16px; }
+html.mobile .kindbtn span { font-size: 11px; }
+html.mobile .mode-grid { grid-template-columns: 1fr; gap: 12px; }
+html.mobile .card { padding: 14px; }
+html.mobile .mode-card h2 { font-size: 19px; }
+html.mobile .card-icon { font-size: 26px; }
+html.mobile .home-links { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+html.mobile .home-links button { font-size: 15px; padding: 10px 8px; }
+html.mobile .room-code { font-size: 30px; }
+
+/* 對局畫面：上方列兩排、棋盤最大、下方抽屜 */
+html.mobile #scr-game { height: 100%; }
+html.mobile .topbar { height: auto; flex-wrap: wrap; padding: 6px 8px; gap: 6px; }
+html.mobile #btnHome { padding: 6px 8px; font-size: 14px; }
+html.mobile .banner-wrap { flex: 1 1 60%; }
+html.mobile .banner-wrap .turn-banner { font-size: 18px; letter-spacing: 1px; padding: 2px 6px; }
+html.mobile .clock { font-size: 11px; letter-spacing: 0; }
+html.mobile .top-right { width: 100%; justify-content: space-between; gap: 6px; }
+html.mobile .viewbtn { padding: 4px 8px; font-size: 12px; }
+html.mobile .vol-icon, html.mobile .mini-music { font-size: 13px; padding: 5px 8px; }
+html.mobile .mini-music { max-width: 120px; }
+html.mobile .music-vol { margin-right: 0; }
+html.mobile .vol:hover .vol-pop { display: none; }
+html.mobile .vol.open .vol-pop { display: flex; }
+html.mobile .vol-pop { top: calc(100% + 4px); }
+html.mobile .vol-pop.left { right: 0; }
+html.mobile .vol-pop.right { left: auto; right: 0; }
+.vol-mini { font-size: 12px; padding: 4px 8px; margin-top: 2px; }
+
+html.mobile .game-body { display: flex; flex-direction: column; padding-bottom: 52px; min-height: 0; }
+html.mobile .game-body > .left { display: contents; }
+html.mobile #pBlack { order: 1; }
+html.mobile .board-wrap { order: 2; flex: 1; min-height: 260px; }
+html.mobile #pRed { order: 3; }
+html.mobile .actions { order: 4; display: flex; overflow-x: auto; gap: 6px; padding: 6px 8px; grid-template-columns: none; scrollbar-width: none; }
+html.mobile .actions::-webkit-scrollbar { display: none; }
+html.mobile .actions button { flex: 0 0 auto; padding: 7px 10px; font-size: 14px; }
+html.mobile .actions.replay-only { display: none; }
+html.mobile .mode-replay .actions.replay-only { display: flex; }
+html.mobile .mode-replay .actions.play-only { display: none; }
+html.mobile .player { margin: 4px 8px; padding: 5px 8px; gap: 8px; border-width: 2px; }
+html.mobile .pportrait, html.mobile .pportrait .pimg { width: 38px; height: 48px; }
+html.mobile .pportrait .pchip { width: 20px; height: 20px; font-size: 12px; left: -4px; bottom: -4px; }
+html.mobile .pbadge { font-size: 10px; top: -6px; padding: 1px 5px; }
+html.mobile .pinfo { display: grid; grid-template-columns: auto auto; gap: 0 8px; align-items: center; }
+html.mobile .pname { font-size: 14px; }
+html.mobile .ptag { font-size: 11px; }
+html.mobile .pclock { font-size: 12px; }
+html.mobile .padv { margin: 0; font-size: 11px; }
+html.mobile .padv img { width: 16px; height: 20px; }
+html.mobile .pcaps { grid-column: 1 / -1; margin: 0; }
+html.mobile .pcap { width: 17px; height: 17px; font-size: 11px; }
+html.mobile .board-tip { display: none; }
+html.mobile .pop { font-size: 40px; }
+html.mobile .pop.proxy { font-size: 26px; white-space: nowrap; }
+
+/* 底部抽屜（著法／軍師／對話／音樂） */
+html.mobile .game-body > .right { position: fixed; left: 0; right: 0; bottom: 0; height: 66vh; z-index: 30; border: 1px solid var(--line); border-bottom: none; border-radius: 16px 16px 0 0; box-shadow: 0 -10px 30px rgba(0,0,0,.55); transform: translateY(calc(100% - 50px)); transition: transform .28s ease; }
+html.mobile body.sheet-open .game-body > .right { transform: translateY(0); }
+html.mobile .tabs { height: 50px; flex: none; }
+html.mobile .tab { font-size: 13px; padding: 6px 2px; }
+html.mobile body:not(.sheet-open) .tab.on { background: transparent; border-bottom-color: transparent; color: var(--muted); }
+html.mobile #pane-moves .movebox { margin: 8px; flex: 1; }
+html.mobile .tabpane { overflow: auto; }
+html.mobile .adv-head { padding: 6px 10px; }
+html.mobile .adv-msg { font-size: 14px; }
+
+/* 對話框、對陣、頭像選擇 */
+html.mobile .modal { min-width: 0; width: 94vw; padding: 14px; max-height: 86vh; }
+html.mobile .modal-btns button { flex: 1; }
+html.mobile .versus { gap: 10px; }
+html.mobile .vs-main { width: 118px; height: 148px; }
+html.mobile .vs-mid { font-size: 38px; }
+html.mobile .vs-name { font-size: 16px; }
+html.mobile .vs-tag, html.mobile .vs-adv { font-size: 12px; }
+html.mobile .pf-body { flex-direction: column-reverse; }
+html.mobile .pf-right { width: 100%; flex-direction: row; justify-content: center; }
+html.mobile .pf-preview { flex-direction: row; }
+html.mobile .pf-slot img, html.mobile .pf-slot .pf-empty { width: 72px; height: 90px; }
+html.mobile .pf-slot.small img, html.mobile .pf-slot.small .pf-empty { width: 56px; height: 70px; }
+html.mobile .pf-grid { grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); max-height: 42vh; }
+html.mobile .pf-item img { width: 62px; height: 78px; }
+html.mobile .pf-item span { font-size: 11px; }
+html.mobile .pf-tabs button { flex: 1; padding: 6px 4px; font-size: 13px; }
+
+/* 設定、棋譜庫、關於 */
+html.mobile .set-row { grid-template-columns: 1fr; gap: 4px; }
+html.mobile .set-row > .muted { grid-column: 1; }
+html.mobile .about { min-width: 0; }
+html.mobile .records { padding: 12px; }
+html.mobile .rec-head { flex-direction: column; align-items: stretch; gap: 8px; }
+html.mobile .rec-actions { flex-wrap: wrap; }
+html.mobile .rec-table th, html.mobile .rec-table td { padding: 7px 6px; font-size: 13px; }
+html.mobile #toasts { left: 10px; right: 10px; bottom: 60px; }
+html.mobile .toast { max-width: none; }
+html.mobile .upd-box { min-width: 0; width: 92vw; }
+
+/* 遊戲說明 */
+html.mobile .guide { padding: 10px; }
+html.mobile .gd-head { flex-wrap: wrap; gap: 8px; }
+html.mobile .gd-head h2 { font-size: 20px; }
+html.mobile .gd-tabs { margin: 0; width: 100%; }
+html.mobile .gd-tabs .kindbtn { padding: 6px 8px; }
+html.mobile .gd-body { display: flex; flex-direction: column; gap: 8px; }
+html.mobile .gd-list { flex-direction: row; overflow-x: auto; flex: none; scrollbar-width: none; }
+html.mobile .gd-item { flex: 0 0 auto; padding: 6px 10px; font-size: 14px; }
+html.mobile .gd-main { display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; }
+html.mobile .gd-caption { order: 2; min-height: 80px; font-size: 16px; padding: 8px 12px; }
+html.mobile .gd-board { order: 1; flex: 1; min-height: 240px; }
+html.mobile .gd-ctrl { order: 3; }
+html.mobile .gd-ctrl button, html.mobile .gd-ctrl select { padding: 6px 8px; font-size: 13px; }
+html.mobile .gd-status { order: 4; }

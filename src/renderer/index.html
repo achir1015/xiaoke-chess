@@ -2,10 +2,13 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-5xY7jflTAlHffw31YtTHdjSdKmm2Ra05XuGOgpvwYYY='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' app: blob: mediastream:; connect-src 'self' https: wss: ws: http:; worker-src 'self' blob:">
 <title>小柯機器人象棋遊戲</title>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="mobile.css">
 <script type="importmap">{"imports":{"three":"../../node_modules/three/build/three.module.js","three/addons/controls/":"./vendor/"}}</script>
+<script src="js/xk-mobile.js"></script>
 <script src="../../node_modules/peerjs/dist/peerjs.min.js"></script>
 <script type="module" src="js/app.js"></script>
 </head>
@@ -36,6 +39,7 @@
             <span id="sfxVolVal" class="vol-val">80</span>
             <input id="sfxVol" class="vslider" type="range" min="0" max="100" value="80" aria-label="落子音效音量">
             <span class="vol-hint">▲大<br>▼小</span>
+            <button id="sfxMute" class="m-only vol-mini">靜音</button>
           </div>
           <button id="btnSfx" class="ghost vol-icon" title="落子音效（按一下靜音／恢復）">🔔 落子</button>
         </div>
@@ -46,6 +50,7 @@
             <span id="musicVolVal" class="vol-val">45</span>
             <input id="musicVol" class="vslider" type="range" min="0" max="100" value="45" aria-label="背景音樂音量">
             <span class="vol-hint">▲大<br>▼小</span>
+            <button id="musicPlay" class="m-only vol-mini">播放</button>
           </div>
         </div>
       </div>
