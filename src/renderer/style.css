@@ -343,3 +343,66 @@ body.mode-aivai #btnHint, body.mode-aivai #btnUndo, body.mode-aivai #btnResign {
 .vol-val { font-size: 14px; font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
 .vol-hint { font-size: 11px; color: var(--muted); line-height: 1.2; text-align: center; }
 @media (max-width: 1280px) { .banner-wrap .turn-banner { font-size: 20px; } .clock { font-size: 12px; } }
+
+/* ---------- v1.3.0：遊戲說明 ---------- */
+.guide-btn { border-color: var(--gold) !important; color: var(--gold); }
+.toast.why { border-left-color: #ff7043; background: #4a2416; font-size: 15px; }
+.guide { height: 100%; display: flex; flex-direction: column; padding: 14px 22px; gap: 10px; min-height: 0; background: radial-gradient(1200px 600px at 30% -10%, #4b2f17 0%, transparent 60%), var(--bg); }
+.gd-head { display: flex; align-items: center; gap: 16px; }
+.gd-head h2 { margin: 0; color: var(--gold); white-space: nowrap; }
+.gd-tabs { margin: 0 0 0 auto; }
+.gd-tabs .kindbtn { padding: 8px 16px; }
+.gd-body { flex: 1; display: grid; grid-template-columns: 210px 1fr; gap: 16px; min-height: 0; }
+.gd-list { display: flex; flex-direction: column; gap: 6px; overflow: auto; }
+.gd-item { text-align: left; display: flex; gap: 10px; align-items: center; padding: 10px 12px; font-size: 16px; }
+.gd-item .n { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: #1d140c; color: var(--gold); font-size: 13px; flex: none; }
+.gd-item.on { border-color: var(--gold); background: #4a2f16; color: var(--gold); }
+.gd-main { display: flex; flex-direction: column; gap: 10px; min-height: 0; align-items: center; }
+.gd-caption { width: 100%; max-width: 920px; min-height: 76px; white-space: pre-line; font-size: 19px; line-height: 1.6; padding: 12px 18px; border-radius: 12px; background: #2a1d12; border: 1px solid var(--line); }
+.gd-caption.practice { border-color: #35c46b; box-shadow: 0 0 14px rgba(53,196,107,.35); }
+.gd-board { flex: 1; min-height: 0; width: 100%; display: flex; justify-content: center; align-items: center; }
+.gb-svg { height: 100%; max-height: 100%; max-width: 100%; }
+.gb-bg { fill: #e2b877; stroke: #8a5a2a; stroke-width: 4; }
+.gb-grid line { stroke: #3b2412; stroke-width: 2.2; }
+.gb-river { font: 700 24px "DFKai-SB", "BiauKai", "Kaiti TC", serif; fill: rgba(70,40,15,.8); text-anchor: middle; }
+.gb-coord { font: 700 15px sans-serif; fill: rgba(70,40,15,.75); text-anchor: middle; }
+.gz { fill: rgba(53,196,107,.22); stroke: #35c46b; stroke-width: 2; stroke-dasharray: 6 4; }
+.gp { transition: transform .7s cubic-bezier(.4,.1,.2,1), opacity .4s; cursor: pointer; }
+.gp.lift .gp-face, .gp.lift .gp-back { filter: drop-shadow(0 8px 6px rgba(0,0,0,.45)); }
+.gp.gone { opacity: 0; }
+.gp-shadow { fill: rgba(0,0,0,.28); transform: translate(2px, 3px); }
+.gp-body { fill: #f6e2b8; stroke-width: 3; }
+.gp-body.red { stroke: #b3242c; } .gp-body.black { stroke: #2a2a2a; }
+.gp-ring { fill: none; stroke-width: 1.6; }
+.gp-ring.red { stroke: #c8102e; } .gp-ring.black { stroke: #141414; }
+.gp-ch { font-family: "DFKai-SB", "BiauKai", "Kaiti TC", serif; font-weight: 900; text-anchor: middle; }
+.gp-ch.red { fill: #c8102e; } .gp-ch.black { fill: #141414; }
+.gp-bodyback { fill: #a8692f; stroke: #6a3a12; stroke-width: 3; }
+.gp-backch { fill: rgba(255,225,160,.85); font-family: "DFKai-SB", "BiauKai", "Kaiti TC", serif; font-weight: 900; text-anchor: middle; }
+.gp .gp-back { display: none; }
+.gp.down .gp-back { display: inline; }
+.gp.down .gp-face { display: none; }
+.gp.flipping > g { animation: gflip .6s ease-in-out; transform-box: fill-box; transform-origin: center; }
+@keyframes gflip { 0% { transform: scaleX(1); } 45% { transform: scaleX(0.05); } 55% { transform: scaleX(0.05); } 100% { transform: scaleX(1); } }
+.gm-sel { fill: none; stroke: #f3c94a; stroke-width: 4; }
+.gm-ok { fill: #2ecc71; opacity: .9; }
+.gm-cap { fill: none; stroke: #2ecc71; stroke-width: 4; }
+.gm-bad circle { fill: rgba(255,82,82,.25); stroke: #ff5252; stroke-width: 2; }
+.gm-bad path { stroke: #ff3b30; stroke-width: 5; stroke-linecap: round; }
+.gm-arrow { fill: none; stroke: #1e88e5; stroke-width: 5; stroke-linecap: round; opacity: .85; }
+.gm-good { fill: none; stroke: #2ecc71; stroke-width: 6; animation: gpulse .9s; }
+.gm-wrong { fill: none; stroke: #ff3b30; stroke-width: 6; animation: gpulse .9s; }
+@keyframes gpulse { from { opacity: 1; } to { opacity: 0; } }
+.gd-ctrl { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.gd-status { min-height: 22px; display: flex; gap: 8px; align-items: center; }
+.gd-answer { padding: 3px 10px; font-size: 13px; }
+/* 說明畫面：棋盤在左邊放大，解說與按鈕在右邊 */
+.gd-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(270px, 380px); grid-template-rows: auto auto 1fr; gap: 12px 18px; align-items: start; }
+.gd-board { grid-column: 1; grid-row: 1 / span 3; height: 100%; min-height: 0; align-self: stretch; }
+.gd-caption { grid-column: 2; grid-row: 1; max-width: none; min-height: 140px; font-size: 20px; }
+.gd-ctrl { grid-column: 2; grid-row: 2; justify-content: flex-start; }
+.gd-ctrl button, .gd-ctrl select { flex: 1 1 auto; }
+.gd-status { grid-column: 2; grid-row: 3; align-self: start; flex-wrap: wrap; }
+.gd-tabs .kindbtn b { white-space: nowrap; }
+@media (max-width: 860px) { .gd-main { grid-template-columns: 1fr; grid-template-rows: auto minmax(320px, 1fr) auto auto; } .gd-board { grid-row: 2; } .gd-caption { grid-column: 1; grid-row: 1; } .gd-ctrl, .gd-status { grid-column: 1; } .gd-ctrl { grid-row: 3; } .gd-status { grid-row: 4; } }
+@media (max-width: 1180px) { .gd-body { grid-template-columns: 170px 1fr; } .gd-item { font-size: 14px; padding: 8px; } .gd-caption { font-size: 17px; } }

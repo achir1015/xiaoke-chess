@@ -10,6 +10,8 @@ import { MusicPlayer } from './music.js';
 import { AdvisorPanel } from './advisor-ui.js';
 import { sfx, setSfx, setSfxVolume, sfxVolume } from './sfx.js';
 import { loadPortraits, portraitUrl, labelOf, validProfile, randomProfile, pickProfile } from './portraits.js';
+import { Guide } from './guide.js';
+import { explainIllegal, explainIllegalHalf } from './explain.js';
 
 const SIDE_NAME = ['紅方', '黑方'];
 const CREDIT = '遊戲開發：吳玉柱 與 Claude AI Opus 5.5';
@@ -278,6 +280,7 @@ function renderHome() {
       h('button', { onclick: () => showScreen('records') }, '📜 棋譜庫'),
       h('button', { onclick: () => openSettings() }, '⚙ 設定'),
       h('button', { onclick: () => { selectTab('music'); showScreen('game'); enterIdleBoard(); } }, '♫ 背景音樂'),
+      h('button', { id: 'btnGuide', class: 'guide-btn', onclick: () => openGuide() }, '📖 遊戲說明'),
       h('button', { id: 'btnAbout', onclick: () => openAbout() }, 'ℹ 關於與更新')),
     h('div', { class: 'credit muted small' }, `v${S.info.version}　${CREDIT}`),
   );
@@ -458,7 +461,17 @@ function onSquareClick(sq) {
     const m = g.legalMoves().find((mv) => moveFrom(mv) === S.selected && moveTo(mv) === sq);
     if (m) { localMove(m); return; }
     sfx.illegal();
+    showWhy(explainIllegal(g.pos, S.selected, sq));
+  } else if (p && colorOf(p) !== S.mySide) {
+    showWhy('這是對方的棋子，請先點選自己的棋子');
   }
+}
+
+// 走錯時告訴玩家原因
+function showWhy(text) {
+  if (!text) return;
+  $$('.toast.why').forEach((t) => t.remove());
+  toast('✕ ' + text, 'why', 3200);
 }
 
 function halfClick(sq) {
@@ -482,8 +495,9 @@ function halfClick(sq) {
     const a = legal.find((x) => !isFlip(x) && actFrom(x) === S.selected && actTo(x) === sq);
     if (a !== undefined) { localMove(a); return; }
     sfx.illegal();
+    showWhy(explainIllegalHalf(g, S.selected, sq));
   } else if (p && my != null && colorOf(p) !== my) {
-    toast('這是對方的棋子', 'info', 1500);
+    showWhy('這是對方的棋子，請點選自己的明子或翻開暗子');
   }
 }
 
@@ -1480,6 +1494,15 @@ function replayAuto() {
 function stopReplayAuto() {
   if (S.replay && S.replay.timer) { clearInterval(S.replay.timer); S.replay.timer = 0; }
   const b = $('#rpPlay'); if (b) b.textContent = '▶';
+}
+
+// ---------------- 遊戲說明 ----------------
+let guide = null;
+function openGuide(kind = S.homeKind) {
+  if (!guide) guide = new Guide($('#guideBody'), { settings: S.settings, save: (p) => saveSettings(p), onBack: () => showScreen('home') });
+  showScreen('guide');
+  guide.open(kind);
+  window.__guide = guide; // 方便自動化測試
 }
 
 // ---------------- 關於與版本更新 ----------------
