@@ -12,6 +12,9 @@ const errors = [];
 win.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
 win.on('pageerror', (e) => errors.push(e.message));
 await win.waitForSelector('#startAI', { timeout: 30000 });
+const pickerShown = await win.evaluate(() => !!document.querySelector('.pf'));
+await win.evaluate(async () => { window.__xkc.settings = await window.xk.settings.set({ profile: { avatar: 'm01', advisor: 'am01' } }); document.querySelectorAll('.modal-back').forEach((b) => b.remove()); });
+const portraitOk = await win.evaluate(() => new Promise((res) => { const i = new Image(); i.onload = () => res(i.naturalWidth > 0); i.onerror = () => res(false); i.src = '../../assets/portraits/f10.svg'; }));
 const tracks = await win.evaluate(() => window.xk.music.list().then((l) => l.length));
 await win.click('#startAI');
 await win.waitForTimeout(1500);
@@ -26,5 +29,5 @@ const r = await win.evaluate(async () => {
   return { moves: S.game.notes, audio: a.currentTime > 0.3, pieces: window.__xkcBoard.allPieces.size };
 });
 if (shot) await win.screenshot({ path: shot });
-console.log({ tracks, ...r, errors });
+console.log({ tracks, pickerShown, portraitOk, ...r, errors });
 await app.close();

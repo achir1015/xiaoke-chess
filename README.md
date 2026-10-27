@@ -16,6 +16,8 @@
   - 悔棋、提和、再來一局都要對方同意；認輸立即生效；斷線會提示。
   - 文字聊天、**語音通話**（通話時背景音樂自動降低音量）。
 - **C. AI 與 AI 對賽**：整盤、半盤都可以觀戰，兩邊難度可分開設定，可調速度、暫停、請軍師講解。
+- **頭像與 AI 軍師（必選）**：60 張原創半身頭像——男英雄 20 位、女佳人 20 位（以古代人物姓氏命名），AI 軍師 20 位（男女各 10，標明「軍師」）。比賽時雙方都顯示自己的頭像與軍師，開局有對陣畫面。
+- **軍師代打**：臨時有事要離開時，按「🧙 軍師代打」讓自己的 AI 軍師接手下棋；回來按「↩ 交還主位」。對方畫面會即時顯示主位換人（卡片換成軍師頭像、聊天室與提示通知）。代打期間對方提出的悔棋、和棋、再來一局會自動婉拒。
 - **3D 立體棋盤棋子**：大字楷書棋子，紅黑分明；斜視、俯視、立體三種視角，右鍵拖曳旋轉、滾輪縮放。
 - **背景音樂**：內建 20 首原創古風曲（每首 3 分 18 秒～3 分 39 秒），雙方各自播放；也能加入自己的 MP3。
 - **AI 軍師**：右側小視窗，雙方都能請教。本機象棋引擎先算出候選著法，再由 Claude 用白話解說；沒有 API 金鑰時提供離線的引擎建議。
@@ -52,6 +54,8 @@ node e2e/net.mjs     # 遠端整盤對賽端對端測試（本機配對伺服器
 node e2e/net-half.mjs # 遠端半盤對賽端對端測試
 npm run dist:win     # Windows 安裝檔與免安裝版
 npm run music        # 重新產生 20 首背景音樂（需要 Python numpy/scipy 與 ffmpeg）
+npm run portraits    # 重新產生 60 張頭像（SVG）
+node e2e/net-proxy.mjs # 遠端對賽頭像互通與軍師代打測試
 ```
 
 ## 架構
@@ -63,6 +67,8 @@ npm run music        # 重新產生 20 首背景音樂（需要 Python numpy/sci
 | `src/renderer/js/book.js` | 內建開局庫與學習棋譜 |
 | `src/renderer/js/banqi.js` | 半盤（暗棋）規則與 AI（機率期望值搜尋） |
 | `src/main/updater.js` | 版本更新（GitHub Release） |
+| `src/renderer/js/portraits.js` | 頭像與軍師選擇 |
+| `scripts/gen_portraits.mjs` | 60 張半身頭像產生器（原創向量插畫） |
 | `src/renderer/js/board3d.js` | Three.js 3D 棋盤 |
 | `src/renderer/js/net.js` | PeerJS 連線（資料通道＋語音） |
 | `src/main/advisor.js` | AI 軍師（Anthropic SDK，串流回覆） |

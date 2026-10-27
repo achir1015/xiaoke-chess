@@ -34,7 +34,7 @@ export function toast(text, kind = 'info', ms = 3200) {
 }
 
 // 對話框：buttons = [{label, value, primary}]；回傳選到的 value
-export function modal(title, body, buttons = [{ label: '確定', value: true, primary: true }], { timeout = 0, timeoutValue = null } = {}) {
+export function modal(title, body, buttons = [{ label: '確定', value: true, primary: true }], { timeout = 0, timeoutValue = null, okClass = '' } = {}) {
   return new Promise((resolve) => {
     const back = h('div', { class: 'modal-back' });
     let timer = null;
@@ -43,7 +43,7 @@ export function modal(title, body, buttons = [{ label: '確定', value: true, pr
     const box = h('div', { class: 'modal' },
       h('h3', {}, title),
       content,
-      h('div', { class: 'modal-btns' }, buttons.map((b) => h('button', { class: b.primary ? 'primary' : '', onclick: () => done(b.value) }, b.label))));
+      h('div', { class: 'modal-btns' }, buttons.map((b) => h('button', { class: b.primary ? ('primary ' + okClass).trim() : '', onclick: () => done(b.value) }, b.label))));
     back.append(box);
     document.body.append(back);
     const first = box.querySelector('button.primary') || box.querySelector('button');

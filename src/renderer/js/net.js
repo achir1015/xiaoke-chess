@@ -3,7 +3,7 @@ import { Emitter, errMsg } from './util.js';
 
 const PeerCtor = () => window.Peer || (window.peerjs && window.peerjs.Peer);
 export const PREFIX = 'xkchess-';
-export const PROTOCOL = 2; // 2：支援半盤
+export const PROTOCOL = 3; // 2：支援半盤；3：頭像與軍師代打
 
 export function iceServers(s) {
   const list = String(s.stun || '').split(/\s+/).filter(Boolean).map((u) => ({ urls: u }));

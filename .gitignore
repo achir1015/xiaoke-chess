@@ -3,3 +3,4 @@ dist/
 e2e/out/
 __pycache__/
 *.log
+assets/portraits/_sheet.html

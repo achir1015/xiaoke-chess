@@ -35,7 +35,8 @@ const shot = (name) => win.screenshot({ path: path.join(outDir, name) });
 
 try {
   await win.waitForSelector('#startAI', { timeout: 20000 });
-  await win.evaluate(async () => { window.__xkc.settings = await window.xk.settings.set({ music: { autoplay: false } }); });
+  await win.evaluate(async () => { window.__xkc.settings = await window.xk.settings.set({ music: { autoplay: false }, profile: { avatar: 'f04', advisor: 'af01' } });
+  document.querySelectorAll('.modal-back').forEach((b) => b.remove()); });
 
   // ---- 半盤：與 AI 對賽 ----
   await win.click('.kindbtn[data-k="half"]');

@@ -9,6 +9,7 @@ import { GameLink, PROTOCOL } from './net.js';
 import { MusicPlayer } from './music.js';
 import { AdvisorPanel } from './advisor-ui.js';
 import { sfx, setSfx } from './sfx.js';
+import { loadPortraits, portraitUrl, labelOf, validProfile, randomProfile, pickProfile } from './portraits.js';
 
 const SIDE_NAME = ['紅方', '黑方'];
 const CREDIT = '遊戲開發：吳玉柱 與 Claude AI Opus 5.5';
@@ -69,6 +70,9 @@ const S = {
   learned: null,
   lastHintTimer: 0,
   info: null,
+  proxy: [false, false],   // 哪一方目前由 AI 軍師代打（依玩家索引）
+  players: [null, null],   // 雙方頭像與軍師 { avatar, advisor }
+  oppProfile: null,
 };
 
 let board, music, advisor, engineAI, engineAna;
@@ -87,6 +91,7 @@ async function init() {
   engineAna = new EngineClient();
   S.opening = new OpeningBook();
   await rebuildLearned();
+  await loadPortraits();
 
   board = new Board3D($('#board'), { onSquareClick: onSquareClick });
   board.setPosition(new Position().board);
@@ -116,6 +121,7 @@ async function init() {
   bindUI();
   renderHome();
   showScreen('home');
+  if (!validProfile(S.settings.profile)) ensureProfile(); // 第一次使用：必須先選頭像（不阻擋其他初始化）
   setInterval(tickClock, 500);
   document.addEventListener('pointerdown', () => sfx.resume(), { once: true });
   window.__xkc = S; // 方便自動化測試
@@ -158,6 +164,7 @@ function bindUI() {
   $('#btnResign').onclick = () => resign();
   $('#btnHint').onclick = () => hint();
   $('#btnPause').onclick = () => togglePause();
+  $('#btnProxy').onclick = () => toggleProxy();
   $('#btnNew').onclick = () => newGameSameMode();
   $('#btnExport').onclick = () => exportCurrent();
   $('#miniMusic').onclick = () => { selectTab('music'); music.toggle(); };
@@ -260,6 +267,7 @@ function renderHome() {
     h('div', { class: 'home-hero' },
       h('div', { class: 'hero-piece' }, '帥'),
       h('div', {}, h('h1', {}, '小柯機器人象棋遊戲'), h('p', { class: 'muted' }, '3D 中國象棋．整盤與半盤')),
+      myProfileCard(),
       h('div', { class: 'hero-name' }, h('label', {}, '我的暱稱'), nameInput)),
     kindSel,
     h('div', { class: 'mode-grid' }, cardAI, cardNet, cardAivai),
@@ -272,6 +280,29 @@ function renderHome() {
   );
   if (!half) renderLearnStat();
 }
+
+// 首頁上的「我的頭像＋AI 軍師」
+function myProfileCard() {
+  const pr = S.settings.profile;
+  if (!validProfile(pr)) return h('button', { class: 'my-profile empty', id: 'btnProfile', onclick: () => ensureProfile(true) }, '選擇頭像與 AI 軍師');
+  return h('button', { class: 'my-profile', id: 'btnProfile', title: '更換頭像與 AI 軍師', onclick: () => ensureProfile(true) },
+    h('img', { class: 'mp-main', src: portraitUrl(pr.avatar) }),
+    h('div', { class: 'mp-text' }, h('b', {}, labelOf(pr.avatar)), h('span', {}, '我的 AI 軍師'),
+      h('div', { class: 'mp-adv' }, h('img', { src: portraitUrl(pr.advisor) }), h('span', {}, labelOf(pr.advisor)))),
+    h('span', { class: 'mp-change' }, '更換'));
+}
+
+// 確認已選頭像（必選）；force=true 表示一定打開選擇視窗
+async function ensureProfile(force = false) {
+  const cur = S.settings.profile;
+  if (!force && validProfile(cur)) return true;
+  const required = !validProfile(cur);
+  const r = await pickProfile(cur, { required });
+  if (r) { await saveSettings({ profile: r }); renderHome(); return true; }
+  return validProfile(S.settings.profile);
+}
+
+const myProfile = () => S.settings.profile;
 
 function enterIdleBoard() {
   if (S.mode && S.mode !== 'idle') return;
@@ -307,6 +338,8 @@ function setupGame(mode, mySide, names, opts = {}) {
   S.game = isHalf() ? new HalfGame(opts.deal) : new Game(opts.startFen || START_FEN);
   S.mySide = mySide;
   S.names = names;
+  S.players = opts.players || [randomProfile(), randomProfile()];
+  S.proxy = [false, false];
   S.selected = -1;
   S.aiThinking = false;
   S.animating = false;
@@ -324,12 +357,43 @@ function setupGame(mode, mySide, names, opts = {}) {
   $('#aiInfo').textContent = '';
   showScreen('game');
   selectTab(mode === 'net' ? 'chat' : 'advisor');
+  updateAdvisorHead();
   updateGameUI();
+  if (mode !== 'replay') showVersus();
+}
+
+// 軍師面板顯示我的軍師（觀戰時顯示輪到那一方的軍師）
+function updateAdvisorHead() {
+  const g = S.game;
+  const idx = ['ai', 'net'].includes(S.mode) ? S.mySide : (g ? g.turn : 0);
+  const pr = S.players[idx];
+  advisor.setAdvisor(pr ? labelOf(pr.advisor) : '小柯軍師', pr ? portraitUrl(pr.advisor) : '');
+}
+
+// 開局對陣畫面
+function showVersus() {
+  const g = S.game;
+  const side = (idx) => {
+    const pr = S.players[idx];
+    if (!pr) return h('div');
+    const c = colorOfPlayer(g, idx);
+    const tag = g.kind === 'half' ? (idx === 0 ? '先手' : '後手') : colorName(c);
+    return h('div', { class: 'vs-side ' + (g.kind === 'half' ? '' : c === RED ? 'red' : 'black') },
+      h('img', { class: 'vs-main', src: portraitUrl(pr.avatar) }),
+      h('div', { class: 'vs-name' }, S.names[idx] || ''),
+      h('div', { class: 'vs-tag' }, `${tag}．${labelOf(pr.avatar)}`),
+      h('div', { class: 'vs-adv' }, h('img', { src: portraitUrl(pr.advisor) }), h('span', {}, labelOf(pr.advisor))));
+  };
+  const el = h('div', { class: 'versus', onclick: () => el.remove() }, side(0), h('div', { class: 'vs-mid' }, 'VS'), side(1));
+  $('#boardWrap').append(el);
+  setTimeout(() => el.classList.add('out'), 2600);
+  setTimeout(() => el.remove(), 3200);
 }
 
 function canMove() {
   const g = S.game;
   if (!g || g.result || S.animating) return false;
+  if (S.proxy[S.mySide]) return false;
   if (S.mode === 'ai') return !S.aiThinking && g.turn === S.mySide;
   if (S.mode === 'net') return !!(S.link && S.link.connected) && g.turn === S.mySide && S.netStarted;
   return false;
@@ -339,7 +403,8 @@ function onSquareClick(sq) {
   if (!S.game || !['ai', 'net'].includes(S.mode)) return;
   const g = S.game;
   if (!canMove()) {
-    if (!g.result && g.turn !== S.mySide) { flashBanner(); sfx.illegal(); }
+    if (!g.result && S.proxy[S.mySide]) toast('目前由 AI 軍師代打，按「交還主位」就能自己下', 'info', 2500);
+    else if (!g.result && g.turn !== S.mySide) { flashBanner(); sfx.illegal(); }
     return;
   }
   if (g.kind === 'half') { halfClick(sq); return; }
@@ -390,7 +455,6 @@ const strToMove = (g, s) => (g.kind === 'half' ? strToAct(s) : iccsToMove(s));
 async function localMove(m) {
   if (S.mode === 'net') S.link.send({ t: 'move', ply: S.game.moves.length, mv: moveToStr(S.game, m) });
   await applyMove(m);
-  if (S.mode === 'ai' && !S.game.result) aiMove();
 }
 
 async function applyMove(m) {
@@ -433,9 +497,12 @@ async function applyMove(m) {
   }
   updateGameUI();
   if (g.result) await onGameOver();
-  else if (S.mode === 'net' && g.turn === S.mySide) {
-    sfx.turn();
-    xk.win.attention('輪到您下棋', `對方：${res.note}`);
+  else {
+    if (S.mode === 'net' && g.turn === S.mySide && !S.proxy[S.mySide]) {
+      sfx.turn();
+      xk.win.attention('輪到您下棋', `對方：${res.note}`);
+    }
+    maybeAutoMove();
   }
 }
 
@@ -451,6 +518,19 @@ function updateGameUI() {
     const color = colorOfPlayer(g, idx);
     card.querySelector('.pname').textContent = S.names[idx] || (half ? (idx === 0 ? '先手' : '後手') : SIDE_NAME[slot]);
     card.querySelector('.ptag').textContent = idx === S.mySide && ['ai', 'net'].includes(S.mode) ? '（我）' : '';
+    const pr = S.players[idx];
+    const proxied = !!S.proxy[idx];
+    card.classList.toggle('proxy', proxied);
+    const img = card.querySelector('.pimg');
+    const want = pr ? portraitUrl(proxied ? pr.advisor : pr.avatar) : '';
+    if (img.getAttribute('src') !== want) img.setAttribute('src', want);
+    img.classList.toggle('hidden', !pr);
+    const advImg = card.querySelector('.padvimg');
+    const advWant = pr ? portraitUrl(proxied ? pr.avatar : pr.advisor) : '';
+    if (advImg.getAttribute('src') !== advWant) advImg.setAttribute('src', advWant);
+    card.querySelector('.padv').classList.toggle('hidden', !pr);
+    card.querySelector('.padvname').textContent = pr ? (proxied ? `主位暫離：${labelOf(pr.avatar)}` : labelOf(pr.advisor)) : '';
+    card.title = pr ? `${labelOf(pr.avatar)}．軍師 ${labelOf(pr.advisor)}` : '';
     const chip = card.querySelector('.pchip');
     chip.textContent = color == null ? (idx === 0 ? '先' : '後') : color === RED ? '帥' : '將';
     card.classList.toggle('red', color === RED || (color == null && slot === RED));
@@ -496,7 +576,9 @@ function updateGameUI() {
   }
   else if (S.mode === 'net' && !(S.link && S.link.connected)) { text = S.netStatus || '等待對手連線…'; cls = 'watch'; }
   else if (S.mode === 'net' && !S.netStarted) { text = '對手已連線，準備開局…'; cls = 'watch'; }
+  else if (g.turn === S.mySide && S.proxy[S.mySide]) { text = `${labelOf(S.players[S.mySide]?.advisor)}代打中`; cls = 'proxy'; }
   else if (g.turn === S.mySide) { text = '輪到您下棋'; cls = 'mine'; }
+  else if (S.mode === 'net' && S.proxy[g.turn]) { text = '換您觀棋（對方由 AI 軍師代打）'; cls = 'watch'; }
   else { text = S.mode === 'ai' ? '換您觀棋（AI 思考中…）' : '換您觀棋（對方思考中）'; cls = 'watch'; }
   banner.textContent = text;
   banner.className = 'turn-banner ' + cls;
@@ -510,7 +592,12 @@ function updateGameUI() {
   $('#btnUndo').title = S.mode === 'ai' && half ? '半盤與 AI 對賽不能悔棋' : '';
   $('#btnDraw').disabled = !playing || S.mode !== 'net';
   $('#btnResign').disabled = !playing;
-  $('#btnHint').disabled = !playing || g.turn !== S.mySide;
+  $('#btnHint').disabled = !playing || g.turn !== S.mySide || S.proxy[S.mySide];
+  const proxyBtn = $('#btnProxy');
+  proxyBtn.classList.toggle('hidden', !['ai', 'net'].includes(S.mode));
+  proxyBtn.disabled = !playing || (S.mode === 'net' && !(S.link && S.link.connected && S.netStarted));
+  proxyBtn.textContent = S.proxy[S.mySide] ? '↩ 交還主位' : '🧙 軍師代打';
+  proxyBtn.classList.toggle('on', !!S.proxy[S.mySide]);
   $('#btnPause').textContent = S.paused ? '▶ 繼續' : '⏸ 暫停';
   $('#btnPause').disabled = S.mode !== 'aivai' || !!g.result;
   $('#btnNew').textContent = S.mode === 'net' ? '再來一局' : '新局';
@@ -589,6 +676,7 @@ function recordMeta(g) {
     mySide: S.mode === 'aivai' ? '' : myColor === RED ? 'red' : myColor === BLACK ? 'black' : '',
     level: S.mode === 'ai' ? lv[S.levelIdx].name : S.mode === 'aivai' ? `${lv[S.aivaiLevels[0]].name} 對 ${lv[S.aivaiLevels[1]].name}` : '',
     opening: half ? '' : S.opening.nameOf(g),
+    players: S.players,
   };
 }
 
@@ -635,7 +723,8 @@ function newGameSameMode() {
 }
 
 // ---------------- 與 AI 對賽 ----------------
-function startAIGame(choice, kind = 'full') {
+async function startAIGame(choice, kind = 'full') {
+  if (!(await ensureProfile())) return;
   S.lastAIChoice = choice;
   const half = kind === 'half';
   let me;
@@ -645,31 +734,34 @@ function startAIGame(choice, kind = 'full') {
   const lv = levelsOf(kind);
   const aiName = `小柯 AI（${lv[Math.min(S.levelIdx, lv.length - 1)].name}）`;
   const myName = S.settings.playerName || '我';
-  setupGame('ai', me, me === 0 ? [myName, aiName] : [aiName, myName], { kind });
+  const mine = myProfile(), ai = randomProfile([mine.avatar, mine.advisor]);
+  setupGame('ai', me, me === 0 ? [myName, aiName] : [aiName, myName], { kind, players: me === 0 ? [mine, ai] : [ai, mine] });
   if (half) popText(me === 0 ? '您先翻' : 'AI 先翻');
-  if (me === 1) setTimeout(() => aiMove(), 700);
+  setTimeout(() => maybeAutoMove(), 900);
 }
 
 // ---------------- AI 對 AI ----------------
-function startAIvAI(cfg, kind = 'full') {
+async function startAIvAI(cfg, kind = 'full') {
+  if (!(await ensureProfile())) return;
   cfg = cfg || { levels: [2, 2], speed: 'normal' };
   S.lastAivai = cfg;
   const lv = levelsOf(kind);
   const names = kind === 'half'
     ? [`先手 AI（${lv[cfg.levels[0]].name}）`, `後手 AI（${lv[cfg.levels[1]].name}）`]
     : [`紅方 AI（${lv[cfg.levels[0]].name}）`, `黑方 AI（${lv[cfg.levels[1]].name}）`];
-  setupGame('aivai', RED, names, { kind });
+  const p0 = randomProfile(), p1 = randomProfile([p0.avatar, p0.advisor]);
+  setupGame('aivai', RED, names, { kind, players: [p0, p1] });
   S.aivaiLevels = cfg.levels.slice();
   S.aivaiDelay = (SPEEDS.find(([v]) => v === cfg.speed) || SPEEDS[1])[2];
   updateGameUI();
-  setTimeout(() => aiMove(), 800);
+  setTimeout(() => maybeAutoMove(), 1200);
 }
 
 function togglePause() {
   if (S.mode !== 'aivai' || !S.game || S.game.result) return;
   S.paused = !S.paused;
   updateGameUI();
-  if (!S.paused && !S.aiThinking && !S.animating) aiMove();
+  if (!S.paused) maybeAutoMove();
 }
 
 // 計算 AI 著法：回傳 { move, source }
@@ -701,29 +793,62 @@ async function computeAIMove(g, levelIdx) {
   return { move, source: source || `搜尋 ${r.depth} 層，AI 自評 ${scoreText(bestScore)}` };
 }
 
+// 現在輪到的一方是否由電腦下（AI 對手、AI 對 AI、或 AI 軍師代打）
+function isAITurn() {
+  const g = S.game;
+  if (!g || g.result || S.animating) return false;
+  if (S.mode === 'aivai') return !S.paused;
+  if (S.mode === 'ai') return g.turn !== S.mySide || !!S.proxy[S.mySide];
+  if (S.mode === 'net') return g.turn === S.mySide && !!S.proxy[S.mySide] && !!(S.link && S.link.connected) && S.netStarted;
+  return false;
+}
+
+function maybeAutoMove() {
+  if (isAITurn() && !S.aiThinking) aiMove();
+}
+
+const proxyLevel = (kind) => Math.min(S.settings.proxyLevel ?? 3, levelsOf(kind).length - 1);
+
 async function aiMove() {
   const g = S.game;
-  if (!g || g.result || !['ai', 'aivai'].includes(S.mode) || S.aiThinking) return;
-  if (S.mode === 'aivai' && S.paused) return;
+  if (!isAITurn() || S.aiThinking) return;
   const mode = S.mode;
+  const turn = g.turn;
+  const isProxy = mode !== 'aivai' && turn === S.mySide;
   S.aiThinking = true;
   updateGameUI();
   const t0 = Date.now();
-  const levelIdx = mode === 'ai' ? S.levelIdx : S.aivaiLevels[g.turn];
+  const levelIdx = mode === 'aivai' ? S.aivaiLevels[turn] : isProxy ? proxyLevel(g.kind) : S.levelIdx;
   let move, source;
   try { ({ move, source } = await computeAIMove(g, levelIdx)); }
   catch (e) { console.error(e); move = g.legalMoves()[0]; source = '備用著法'; }
-  const minWait = mode === 'aivai' ? S.aivaiDelay : 450;
+  const minWait = mode === 'aivai' ? S.aivaiDelay : isProxy ? 700 : 450;
   const wait = minWait - (Date.now() - t0);
   if (wait > 0) await sleep(wait);
-  if (S.game !== g || S.mode !== mode) { S.aiThinking = false; return; } // 已離開或重開
   S.aiThinking = false;
-  const who = mode === 'aivai' ? S.names[g.turn] : 'AI';
+  // 已離開、重開、暫停或主位已收回：放棄這步
+  if (S.game !== g || S.mode !== mode || g.turn !== turn || !isAITurn()) { updateGameUI(); maybeAutoMove(); return; }
+  const who = mode === 'aivai' ? S.names[turn] : isProxy ? `軍師 ${labelOf(S.players[turn]?.advisor)}` : 'AI';
   $('#aiInfo').textContent = `${who}：${source}`;
-  if (mode === 'aivai' && S.paused) { updateGameUI(); return; }
-  if (move != null && move >= 0 && g.legalMoves().includes(move)) await applyMove(move);
-  else updateGameUI();
-  if (S.mode === 'aivai' && S.game === g && !g.result && !S.paused) aiMove();
+  if (move != null && move >= 0 && g.legalMoves().includes(move)) {
+    if (mode === 'net') S.link.send({ t: 'move', ply: g.moves.length, mv: moveToStr(g, move), proxy: true });
+    await applyMove(move);
+  } else updateGameUI();
+}
+
+// 軍師代打：暫時離開時讓 AI 軍師接手，回來後交還主位
+function toggleProxy() {
+  const g = S.game;
+  if (!g || g.result || !['ai', 'net'].includes(S.mode)) return;
+  const on = !S.proxy[S.mySide];
+  S.proxy[S.mySide] = on;
+  const adv = labelOf(S.players[S.mySide]?.advisor);
+  if (S.mode === 'net') S.link.send({ t: 'proxy', on, advisor: S.players[S.mySide]?.advisor, ply: g.moves.length });
+  if (on) { popText(`AI 軍師「${adv}」接手`, 'proxy'); chatSys(`您暫時離開，由 AI 軍師「${adv}」代打`); }
+  else { popText('主位回來了', 'proxy'); chatSys('您已交還主位，換回自己下棋'); }
+  updateGameUI();
+  updateAdvisorHead();
+  maybeAutoMove();
 }
 
 // ---------------- 悔棋、和棋、認輸、提示 ----------------
@@ -757,6 +882,7 @@ function doUndo(n) {
   board.setHint(-1);
   S.clockSide = g.turn;
   updateGameUI();
+  maybeAutoMove();
 }
 
 async function offerDraw() {
@@ -824,6 +950,7 @@ function netWait(html) {
 }
 
 async function hostRoom(sideChoice, kind = 'full') {
+  if (!(await ensureProfile())) return;
   closeNet();
   S.hostSide = sideChoice;
   S.hostKind = kind;
@@ -847,6 +974,7 @@ async function hostRoom(sideChoice, kind = 'full') {
 }
 
 async function joinRoom(code) {
+  if (!(await ensureProfile())) return;
   closeNet();
   netWait(h('span', {}, '正在連線…'));
   const link = new GameLink(S.settings);
@@ -864,7 +992,7 @@ async function joinRoom(code) {
 function bindLink(link) {
   link.on('connected', () => {
     S.netStarted = false;
-    link.send({ t: 'hello', name: S.settings.playerName || '棋友', ver: PROTOCOL });
+    link.send({ t: 'hello', name: S.settings.playerName || '棋友', ver: PROTOCOL, profile: myProfile() });
   });
   link.on('msg', (m) => onNetMsg(link, m));
   link.on('lost', (reason) => {
@@ -884,7 +1012,9 @@ function bindLink(link) {
 function makeStart(hostSide, kind) {
   const me = S.settings.playerName || '棋友';
   const names = hostSide === 0 ? [me, S.oppName] : [S.oppName, me];
-  const start = { t: 'start', kind, hostSide, gameId: newGameId(), names };
+  const opp = validProfile(S.oppProfile) ? S.oppProfile : randomProfile([myProfile().avatar]);
+  const players = hostSide === 0 ? [myProfile(), opp] : [opp, myProfile()];
+  const start = { t: 'start', kind, hostSide, gameId: newGameId(), names, players };
   if (kind === 'half') start.deal = new HalfGame().deal;
   else start.fen = START_FEN;
   return start;
@@ -893,7 +1023,8 @@ function makeStart(hostSide, kind) {
 function startNetGame(m) {
   const kind = m.kind === 'half' ? 'half' : 'full';
   const mySide = S.link.role === 'host' ? m.hostSide : m.hostSide ^ 1;
-  setupGame('net', mySide, m.names, { kind, startFen: m.fen || START_FEN, deal: m.deal });
+  setupGame('net', mySide, m.names, { kind, startFen: m.fen || START_FEN, deal: m.deal, players: Array.isArray(m.players) && m.players.length === 2 ? m.players.map((p) => (validProfile(p) ? p : randomProfile())) : null });
+  if (Array.isArray(m.proxy)) S.proxy = m.proxy.map(Boolean);
   S.gameId = m.gameId;
   S.netStarted = true;
   S.netStatus = '';
@@ -924,6 +1055,7 @@ async function onNetMsg(link, m) {
     case 'hello':
       S.oppName = String(m.name || '對手').slice(0, 16);
       S.opponentVer = m.ver || 1;
+      S.oppProfile = validProfile(m.profile) ? { avatar: m.profile.avatar, advisor: m.profile.advisor } : null;
       if (link.role === 'host') {
         if (S.hostKind === 'half' && S.opponentVer < 2) {
           link.send({ t: 'old', text: '房主開的是半盤，您的程式版本太舊，請先更新到最新版。' });
@@ -933,7 +1065,7 @@ async function onNetMsg(link, m) {
         }
         if (S.mode === 'net' && S.game && !S.game.result && S.netStarted) {
           // 斷線重連：把目前棋局送給對方
-          link.send({ ...S.curStart, moves: S.game.moves.map((x) => moveToStr(S.game, x)) });
+          link.send({ ...S.curStart, moves: S.game.moves.map((x) => moveToStr(S.game, x)), proxy: S.proxy });
           S.netStatus = '';
           chatSys('對手已重新連線');
           updateGameUI();
@@ -947,7 +1079,7 @@ async function onNetMsg(link, m) {
       }
       break;
     case 'start':
-      if (link.role === 'guest') startNetGame(m);
+      if (link.role === 'guest') { startNetGame(m); setTimeout(() => maybeAutoMove(), 800); }
       break;
     case 'move': {
       if (!g || S.mode !== 'net' || g.result) return;
@@ -969,8 +1101,28 @@ async function onNetMsg(link, m) {
         updateGameUI();
       }
       break;
+    case 'proxy': {
+      if (!g) return;
+      const oppIdx = S.mySide ^ 1;
+      S.proxy[oppIdx] = !!m.on;
+      const pr = S.players[oppIdx];
+      const adv = labelOf(m.advisor || pr?.advisor);
+      if (m.on) {
+        popText(`對方換由 AI 軍師「${adv}」代打`, 'proxy');
+        chatSys(`${S.oppName || '對方'} 暫時離開，主位換由 AI 軍師「${adv}」代打`);
+        toast(`對方暫時離開，換 AI 軍師「${adv}」代打`, 'info', 5000);
+      } else {
+        popText(`${S.oppName || '對方'} 回到主位`, 'proxy');
+        chatSys(`${S.oppName || '對方'} 回來了，主位換回「${labelOf(pr?.avatar)}」親自下棋`);
+        toast('對方回到主位，親自下棋', 'info', 4000);
+      }
+      xk.win.attention('主位換人', m.on ? `對方改由 AI 軍師「${adv}」代打` : '對方回到主位');
+      updateGameUI();
+      break;
+    }
     case 'undo-req': {
       if (!g || g.result) return;
+      if (S.proxy[S.mySide]) { link.send({ t: 'undo-no' }); link.send({ t: 'chat', text: '（AI 軍師代打中，主位暫時離開，無法回覆悔棋）' }); return; }
       const ok = await modal('悔棋請求', `${S.oppName} 想要悔棋（退回 ${m.n} 步），同意嗎？`, [{ label: '不同意', value: false }, { label: '同意', value: true, primary: true }], { timeout: 30000, timeoutValue: false });
       if (ok && S.game === g && g.moves.length === m.ply) { link.send({ t: 'undo-ok', n: m.n }); doUndo(m.n); chatSys(`同意對方悔棋 ${m.n} 步`); }
       else link.send({ t: 'undo-no' });
@@ -980,6 +1132,7 @@ async function onNetMsg(link, m) {
     case 'undo-no': toast('對方不同意悔棋'); break;
     case 'draw-req': {
       if (!g || g.result) return;
+      if (S.proxy[S.mySide]) { link.send({ t: 'draw-no' }); link.send({ t: 'chat', text: '（AI 軍師代打中，主位暫時離開，無法回覆和棋）' }); return; }
       const ok = await modal('和棋提議', `${S.oppName} 提議和棋，同意嗎？`, [{ label: '繼續下', value: false }, { label: '同意和棋', value: true, primary: true }], { timeout: 30000, timeoutValue: false });
       if (ok && !g.result) { link.send({ t: 'draw-ok' }); g.agreeDraw(); await onGameOver(); }
       else link.send({ t: 'draw-no' });
@@ -991,6 +1144,7 @@ async function onNetMsg(link, m) {
       if (g && !g.result) { g.resign(S.mySide ^ 1); await onGameOver(); }
       break;
     case 'rematch-req': {
+      if (S.proxy[S.mySide]) { link.send({ t: 'rematch-no' }); link.send({ t: 'chat', text: '（主位暫時離開，回來後再約下一局）' }); break; }
       const ok = await modal('再來一局', `${S.oppName} 想再下一局（${isHalf() ? '先後交換' : '紅黑交換'}），同意嗎？`, [{ label: '不要', value: false }, { label: '好啊', value: true, primary: true }], { timeout: 45000, timeoutValue: false });
       if (!ok) { link.send({ t: 'rematch-no' }); break; }
       if (link.role === 'host') startRematchAsHost();
@@ -1237,7 +1391,8 @@ async function openReplay(id) {
     const firstRed = rec.firstColor !== 'black';
     names = firstRed ? [rec.red || '紅方', rec.black || '黑方'] : [rec.black || '黑方', rec.red || '紅方'];
   } else names = [rec.red || '紅方', rec.black || '黑方'];
-  setupGame('replay', rec.mySide === 'black' && !half ? BLACK : RED, names, { kind: half ? 'half' : 'full', startFen: rec.startFen || START_FEN, deal: rec.deal });
+  const recPlayers = Array.isArray(rec.players) && rec.players.length === 2 && rec.players.every(validProfile) ? rec.players : null;
+  setupGame('replay', rec.mySide === 'black' && !half ? BLACK : RED, names, { kind: half ? 'half' : 'full', startFen: rec.startFen || START_FEN, deal: rec.deal, players: recPlayers });
   S.replay.game = full;
   replayGo(0);
   if (full.result) toast(resultText(full.result));
@@ -1373,6 +1528,7 @@ async function openSettings() {
   f.sfx = h('input', { type: 'checkbox', checked: s.sfx });
   f.autoplay = h('input', { type: 'checkbox', checked: s.music.autoplay });
   f.autoUpdate = h('input', { type: 'checkbox', checked: s.autoUpdate !== false });
+  f.proxyLevel = h('select', {}, LEVELS.map((l, i) => h('option', { value: i, selected: i === (s.proxyLevel ?? 3) }, l.name)));
   f.key = h('input', { type: 'password', placeholder: s.advisor.hasKey ? '（已設定，留空表示不變更）' : 'sk-ant-…' });
   f.model = h('select', {}, ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5'].map((m) => h('option', { value: m, selected: s.advisor.model === m }, m)));
   f.effort = h('select', {}, [['low', '快速（low）'], ['medium', '一般（medium）'], ['high', '深入（high）']].map(([v, l]) => h('option', { value: v, selected: s.advisor.effort === v }, l)));
@@ -1392,6 +1548,8 @@ async function openSettings() {
     row('音效', h('label', { class: 'chk' }, f.sfx, ' 落子、吃子、翻子、將軍音效')),
     row('背景音樂', h('label', { class: 'chk' }, f.autoplay, ' 開啟程式後自動播放')),
     row('版本更新', h('label', { class: 'chk' }, f.autoUpdate, ' 開啟程式時自動檢查新版本')),
+    row('頭像與 AI 軍師', h('button', { onclick: async () => { await ensureProfile(true); } }, '更換頭像與軍師')),
+    row('軍師代打的棋力', f.proxyLevel, '暫時離開時，AI 軍師用這個難度替您下棋。'),
     h('h4', {}, 'AI 軍師（Claude）'),
     row('Anthropic API 金鑰', f.key, s.advisor.envKey && !s.advisor.hasKey ? '已偵測到環境變數 ANTHROPIC_API_KEY。' : '金鑰會加密存在本機，只用來呼叫 Claude。沒有金鑰時軍師仍會提供電腦引擎的建議。'),
     row('模型', f.model),
@@ -1413,6 +1571,7 @@ async function applySettings(f) {
     playerName: f.name.value.trim() || '棋友',
     sfx: f.sfx.checked,
     autoUpdate: f.autoUpdate.checked,
+    proxyLevel: Number(f.proxyLevel.value),
     music: { autoplay: f.autoplay.checked },
     advisor: { model: f.model.value, effort: f.effort.value },
     server: { mode: f.srvMode.value, host: f.host.value.trim(), port: Number(f.port.value) || 9000, path: f.path.value.trim() || '/', secure: f.secure.checked },

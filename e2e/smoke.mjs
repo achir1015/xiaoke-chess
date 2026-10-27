@@ -33,7 +33,8 @@ const myTurn = () => waitFor(() => document.querySelector('#turnBanner').textCon
 
 try {
   await win.waitForSelector('#startAI', { timeout: 20000 });
-  await win.evaluate(async () => { window.__xkc.settings = await window.xk.settings.set({ music: { autoplay: false } }); });
+  await win.evaluate(async () => { window.__xkc.settings = await window.xk.settings.set({ music: { autoplay: false }, profile: { avatar: 'm01', advisor: 'am01' } });
+  document.querySelectorAll('.modal-back').forEach((b) => b.remove()); });
   await win.waitForTimeout(500);
   await win.screenshot({ path: path.join(outDir, '1-home.png') });
   check('首頁顯示 A、B 兩種模式與半盤', (await win.locator('.mode-card').count()) === 3);

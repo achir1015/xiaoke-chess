@@ -25,6 +25,13 @@ export class AdvisorPanel {
     xk.advisor.onDone((d) => this.onDone(d));
   }
 
+  // 顯示目前的 AI 軍師（頭像與名稱）
+  setAdvisor(label, url) {
+    this.nameEl.textContent = label || '小柯軍師';
+    if (url) this.avEl.src = url;
+    this.avEl.classList.toggle('hidden', !url);
+  }
+
   setHasKey(v) {
     this.hasKey = v;
     this.modeEl.textContent = v ? '🟢 Claude 軍師（線上）' : '⚪ 離線軍師（本機引擎）';
@@ -33,11 +40,13 @@ export class AdvisorPanel {
 
   build() {
     this.modeEl = h('div', { class: 'adv-mode' });
+    this.avEl = h('img', { class: 'adv-portrait', alt: '' });
+    this.nameEl = h('b', {}, '小柯軍師');
     this.log = h('div', { class: 'adv-log' });
     this.input = h('textarea', { class: 'adv-input', rows: 2, placeholder: '問軍師，例如：我的馬要怎麼出來？（Enter 送出）', onkeydown: (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.send(); } } });
     this.btnSend = h('button', { class: 'primary', onclick: () => this.send() }, '請教');
     this.root.append(
-      h('div', { class: 'adv-head' }, h('span', { class: 'adv-avatar' }, '🧙'), h('div', {}, h('b', {}, '小柯軍師'), this.modeEl)),
+      h('div', { class: 'adv-head' }, this.avEl, h('div', {}, this.nameEl, this.modeEl)),
       this.log,
       h('div', { class: 'adv-quick' }, QUICK.map(([label, q]) => h('button', { class: 'chip', onclick: () => this.send(q) }, label))),
       h('div', { class: 'adv-send' }, this.input, this.btnSend),

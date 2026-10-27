@@ -32,16 +32,17 @@
     </header>
     <div class="game-body">
       <aside class="left">
-        <div id="pBlack" class="player black"><span class="pchip">將</span><div class="pinfo"><div><span class="pname">黑方</span><span class="ptag"></span></div><div class="pclock">0:00</div><div class="pcaps"></div></div></div>
+        <div id="pBlack" class="player black"><div class="pportrait"><img class="pimg" alt=""><span class="pchip">將</span><span class="pbadge">AI 軍師代打</span></div><div class="pinfo"><div><span class="pname">黑方</span><span class="ptag"></span></div><div class="pclock">0:00</div><div class="padv"><img class="padvimg" alt=""><span class="padvname"></span></div><div class="pcaps"></div></div></div>
         <div class="movebox">
           <div class="movehead"><b>著法紀錄</b><span id="openingName" class="muted small"></span></div>
           <div id="moveList" class="movelist"></div>
           <div id="aiInfo" class="muted small ai-info"></div>
           <div id="halfTip" class="small half-tip"></div>
         </div>
-        <div id="pRed" class="player red"><span class="pchip">帥</span><div class="pinfo"><div><span class="pname">紅方</span><span class="ptag"></span></div><div class="pclock">0:00</div><div class="pcaps"></div></div></div>
+        <div id="pRed" class="player red"><div class="pportrait"><img class="pimg" alt=""><span class="pchip">帥</span><span class="pbadge">AI 軍師代打</span></div><div class="pinfo"><div><span class="pname">紅方</span><span class="ptag"></span></div><div class="pclock">0:00</div><div class="padv"><img class="padvimg" alt=""><span class="padvname"></span></div><div class="pcaps"></div></div></div>
         <div class="actions play-only">
           <button id="btnHint">💡 提示</button>
+          <button id="btnProxy" class="proxy-btn">🧙 軍師代打</button>
           <button id="btnPause" class="aivai-only">⏸ 暫停</button>
           <button id="btnUndo">↶ 悔棋</button>
           <button id="btnDraw" class="net-only">🤝 提和</button>

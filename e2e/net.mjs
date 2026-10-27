@@ -29,7 +29,8 @@ async function launch(profile, name) {
   win.on('pageerror', (e) => errors.push('[pageerror] ' + e.message));
   await win.waitForSelector('#btnHost', { timeout: 20000 });
   await win.evaluate(async ({ port, name }) => {
-    window.__xkc.settings = await window.xk.settings.set({ playerName: name, server: { mode: 'custom', host: '127.0.0.1', port, path: '/', secure: false }, music: { autoplay: false } });
+    window.__xkc.settings = await window.xk.settings.set({ playerName: name, server: { mode: 'custom', host: '127.0.0.1', port, path: '/', secure: false }, music: { autoplay: false }, profile: name === '小明' ? { avatar: 'm05', advisor: 'am01' } : { avatar: 'f02', advisor: 'af03' } });
+    document.querySelectorAll('.modal-back').forEach((b) => b.remove());
   }, { port: PORT, name });
   const waitFor = async (fn, arg, ms = 20000) => {
     const t = Date.now();
