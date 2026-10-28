@@ -2,6 +2,11 @@
 
 遊戲開發：吳玉柱 與 Claude AI Opus 5.5
 
+**v1.5.0 新功能：iPad／iPhone 版**
+- 用 iPad 的 Safari 開 https://achir1015.github.io/xiaoke-chess/ios/ ，按「安裝到這台 iPad／iPhone」即可安裝（限開發者登記過的裝置）
+- iPad 橫放是電腦版畫面（左棋手、中棋盤、右軍師）；iPhone 直放是手機版畫面；都能和電腦版、Android 版連線對戰
+- 觸控螢幕（iPad）的音量改成點一下打開直立滑桿
+
 **v1.4.0 新功能：Android 手機版**
 - 直立畫面的 Android App（`XiaokeChess-版本-android.apk`），桌面版功能都有：整盤／半盤、與 AI、與真人遠端（可和電腦版互連）、AI 對 AI、語音通話、背景音樂、AI 軍師與軍師代打、頭像、遊戲說明（手機中文語音）、棋譜庫、檢查更新
 - 半盤棋盤在手機上自動轉成直的；著法、軍師、音樂放在下方抽屜
@@ -30,6 +35,7 @@
 - **Windows 11**：`XiaokeChess-版本-win-x64.exe`（安裝版）或 `-portable.exe`（免安裝版）
 - **MacBook Pro（Apple 晶片 M1～M4）**：`XiaokeChess-版本-mac-arm64.dmg`
 - **Intel Mac**：`XiaokeChess-版本-mac-x64.dmg`
+- **iPad／iPhone**：用 Safari 開 https://achir1015.github.io/xiaoke-chess/ios/ 安裝（`xiaoke-chess-ios.ipa`）；第一次開啟需開「開發者模式」
 - **Android 手機（8.0 以上）**：`XiaokeChess-版本-android.apk`，下載後開啟安裝（需允許「安裝未知應用程式」）
 
 macOS 版未經 Apple 公證，第一次開啟請在 Finder 對程式按右鍵 →「打開」。

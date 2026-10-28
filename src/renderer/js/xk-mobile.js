@@ -1,15 +1,21 @@
-// 手機版（Android）與網頁版的 window.xk：取代桌面版主程序提供的功能。
+// 手機版（Android、iPhone／iPad）與網頁版的 window.xk：取代桌面版主程序提供的功能。
 // 桌面版有 preload 提供 window.xk，這個檔案就什麼都不做。
-// Android App 由原生程式提供 window.XiaokeAndroid（語音、存檔、更新、開網址）；在一般瀏覽器測試時改用網頁功能。
+// Android App 由原生程式提供 window.XiaokeAndroid（語音、存檔、更新、開網址）；
+// iPhone／iPad App 提供 window.XiaokeIOS＋messageHandlers.xkc（存檔分享、開網址）；在一般瀏覽器測試時改用網頁功能。
 (function () {
   'use strict';
   if (window.xk) return;
   var A = window.XiaokeAndroid || null;
   var isAndroid = !!A;
+  var isIOS = !!(window.XiaokeIOS && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.xkc);
+  function ios(cmd, args) { return window.webkit.messageHandlers.xkc.postMessage({ cmd: cmd, args: args || [] }); }
   var ua = navigator.userAgent || '';
-  var mobile = isAndroid || /Android|iPhone|iPad|Mobile/i.test(ua) || /[?&]mobile=1/.test(location.search);
+  // iPad 的 WebView 用電腦版 UA（Macintosh），所以 iPad 走電腦版版面（橫放），只有 iPhone 用手機直立版面
+  var mobile = isAndroid || /Android|iPhone|Mobile/i.test(ua) || /[?&]mobile=1/.test(location.search);
+  var touch = mobile || isIOS || navigator.maxTouchPoints > 1;
   if (mobile) document.documentElement.classList.add('mobile');
-  document.documentElement.classList.add(isAndroid ? 'android' : 'webapp');
+  else if (touch) document.documentElement.classList.add('touch');
+  document.documentElement.classList.add(isAndroid ? 'android' : isIOS ? 'ios' : 'webapp');
 
   function parse(s) { try { return JSON.parse(s); } catch (e) { return null; } }
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
@@ -122,6 +128,15 @@
   }
   function saveText(name, text) {
     var bytes = new TextEncoder().encode('﻿' + text);
+    if (isIOS) {
+      // 寫到 App 的暫存檔，再開分享選單（儲存到「檔案」、AirDrop、LINE…）
+      return ios('begin_save', [name]).then(function (b) {
+        if (!b || b.status !== 'ok') throw new Error((b && b.message) || '無法存檔');
+        var chain = Promise.resolve();
+        for (var i = 0; i < bytes.length; i += 512 * 1024) (function (part) { chain = chain.then(function () { return ios('write_chunk', [b.token, b64(part)]); }); })(bytes.subarray(i, i + 512 * 1024));
+        return chain.then(function () { return ios('end_save', [b.token]); }).then(function (e) { return e && e.status === 'ok' ? e.path : ''; });
+      });
+    }
     if (isAndroid) {
       var b = parse(A.beginSave(name));
       if (!b || b.status !== 'ok') return Promise.reject(new Error((b && b.message) || '無法存檔'));
@@ -139,6 +154,7 @@
   // ---------------- 版本更新 ----------------
   var progressFns = [];
   var updInfo = null;
+  var IOS_INSTALL_PAGE = 'https://achir1015.github.io/xiaoke-chess/ios/';
   function cmpVer(a, b) {
     var pa = String(a).replace(/^v/, '').split('.').map(Number), pb = String(b).replace(/^v/, '').split('.').map(Number);
     for (var i = 0; i < 3; i++) { var d = (pa[i] || 0) - (pb[i] || 0); if (d) return d; }
@@ -162,7 +178,10 @@
       return r.json();
     }).then(function (j) {
       var latest = String(j.tag_name || '').replace(/^v/, '');
-      updInfo = { current: cur, latest: latest, newer: cmpVer(latest, cur) > 0, notes: String(j.body || '').slice(0, 4000), page: j.html_url, asset: null, flavor: 'web', canInstall: false };
+      // iPhone／iPad：有 .ipa 就開線上安裝頁（itms-services），在 Safari 按一下就裝好新版
+      var ipa = isIOS && (j.assets || []).filter(function (a) { return /\.ipa$/i.test(a.name); })[0];
+      updInfo = { current: cur, latest: latest, newer: cmpVer(latest, cur) > 0, notes: String(j.body || '').slice(0, 4000), page: ipa ? IOS_INSTALL_PAGE : j.html_url,
+        asset: ipa ? { name: ipa.name, url: ipa.browser_download_url, size: ipa.size } : null, flavor: isIOS ? 'ios' : 'web', canInstall: false };
       return updInfo;
     });
   }
@@ -247,17 +266,19 @@
     stop: function () { A.ttsStop(); Object.keys(ttsWait).forEach(window.__xkTtsDone); },
   } : null;
 
+  function openUrl(url) { if (isAndroid) A.openUrl(url); else if (isIOS) ios('open_url', [url]); else window.open(url, '_blank'); }
+
   // ---------------- 手機返回鍵（Android 原生呼叫） ----------------
   window.__xkBack = function () { return window.__xkcBack ? !!window.__xkcBack() : false; };
 
   window.xk = {
     settings: { get: function () { return Promise.resolve(pub()); }, set: function (p) { return Promise.resolve(setSettings(p)); } },
     sys: {
-      info: function () { return Promise.resolve({ platform: isAndroid ? 'android' : 'web', arch: '', version: appVersion(), packaged: isAndroid, profile: '', electron: '', mobile: mobile }); },
+      info: function () { return Promise.resolve({ platform: isAndroid ? 'android' : isIOS ? 'ios' : 'web', arch: '', version: appVersion(), packaged: isAndroid || isIOS, profile: '', electron: '', mobile: mobile }); },
       askMicrophone: function () { return Promise.resolve(true); },
     },
     win: { attention: function () { try { if (navigator.vibrate) navigator.vibrate([120, 60, 120]); } catch (e) { /* 不支援 */ } return Promise.resolve(); } },
-    openExternal: function (url) { if (isAndroid) A.openUrl(url); else window.open(url, '_blank'); return Promise.resolve(); },
+    openExternal: function (url) { openUrl(url); return Promise.resolve(); },
     games: {
       save: function (rec) { var id = String(rec.id || '').replace(/[^\w.-]/g, '') || newId(); var data = Object.assign({}, rec, { id: id }); return tx('games', 'readwrite', function (s) { s.put(data); }).then(function () { return id; }); },
       list: function () { return tx('games', 'readonly', function (s) { return s.getAll(); }).then(function (l) { return (l || []).sort(function (a, b) { return a.id < b.id ? 1 : -1; }).map(summary); }); },
@@ -295,7 +316,7 @@
       check: checkUpdate,
       download: downloadUpdate,
       install: function () { return Promise.resolve({ manual: true, android: isAndroid }); },
-      openPage: function () { var u = (updInfo && updInfo.page) || 'https://github.com/achir1015/xiaoke-chess/releases/latest'; if (isAndroid) A.openUrl(u); else window.open(u, '_blank'); return Promise.resolve(); },
+      openPage: function () { openUrl((updInfo && updInfo.page) || (isIOS ? IOS_INSTALL_PAGE : 'https://github.com/achir1015/xiaoke-chess/releases/latest')); return Promise.resolve(); },
       onProgress: function (fn) { progressFns.push(fn); return function () { progressFns = progressFns.filter(function (f) { return f !== fn; }); }; },
     },
     advisor: {
@@ -307,6 +328,8 @@
     },
     tts: tts,
     mobile: mobile,
+    touch: touch,
     android: isAndroid,
+    ios: isIOS,
   };
 })();

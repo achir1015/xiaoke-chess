@@ -7,7 +7,7 @@ https://github.com/user-attachments/assets/a985f019-d2bd-448b-b406-f571e7e4d511
 <img width="622" height="941" alt="image" src="https://github.com/user-attachments/assets/8e6b601a-a85f-4107-b2a3-64815e55a54c" />
 <img width="2268" height="4032" alt="image" src="https://github.com/user-attachments/assets/00e51107-c54e-434c-9d4d-4b3ce81c5a07" />
 
-3D 立體中國象棋遊戲：Windows 11、MacBook Pro 桌面版，以及 Android 手機版（直立）。從「小柯機器人遠端連線」的構想延伸而來，沿用同一套 WebRTC 點對點連線。
+3D 立體中國象棋遊戲：Windows 11、MacBook Pro 桌面版，Android 手機版（直立），以及 iPad／iPhone 版。從「小柯機器人遠端連線」的構想延伸而來，沿用同一套 WebRTC 點對點連線。
 
 ## 功能
 
@@ -46,6 +46,17 @@ https://github.com/user-attachments/assets/a985f019-d2bd-448b-b406-f571e7e4d511
 - 著法、軍師、音樂放在下方抽屜，點分頁拉起；兩指拖曳旋轉、捏合縮放棋盤；返回鍵會先關掉面板與視窗。
 - 更新：在「關於與更新」按檢查更新，下載後由 Android 安裝程式覆蓋安裝（資料保留）。
 
+## iPad／iPhone 版（v1.5.0 起）
+
+**用 iPad 的 Safari 開 👉 [achir1015.github.io/xiaoke-chess/ios](https://achir1015.github.io/xiaoke-chess/ios/)**，按「安裝到這台 iPad／iPhone」→「安裝」即可（電腦開這一頁會顯示 QR Code，用 iPad 相機掃）。
+
+- **iPad 橫放**：和電腦版同一個畫面——左邊棋手與著法、中間 3D 棋盤、右邊軍師／對話／音樂。點棋子下棋，兩指拖曳旋轉、捏合縮放；音量圖示點一下打開直立滑桿。
+- **iPhone 直放**：和 Android 版同一個手機版面。
+- 功能和其他版本一樣，也能和電腦版、Android 版互相連線對戰。
+- 第一次打開若顯示「需要開發者模式」：到「設定 → 隱私權與安全性」打開「開發者模式」→ 重新啟動 → 在跳出的視窗按「開啟」。每台裝置只要做一次。
+- App Store 上架前，安裝檔只能裝在開發者登記過的 iPad／iPhone。
+- 更新：在「關於與更新」按檢查更新，會開啟安裝頁，再按一次安裝即可（棋譜、頭像與設定都保留）。
+
 ## 版本更新
 
 程式開啟時會自動檢查 GitHub 上的新版本（也可在首頁「關於與更新」手動檢查）：
@@ -74,6 +85,9 @@ npm run mobile       # 產生手機版網頁（mobile/www）
 node e2e/mobile.mjs  # 手機版網頁測試（Chrome 手機模擬）
 python android/build.py            # 建置 Android APK（不用 Gradle；需 JDK 17、Android SDK）
 python android/build.py debug install  # 除錯版裝到手機，再用 node e2e/phone.mjs 實機測試
+node e2e/ipad.mjs    # iPad 橫放／iPhone 版面測試（Chrome 模擬＋模擬 iOS 橋）
+# iPad／iPhone：把 ios/、mobile/www、package.json 複製到 Mac，bash ios/sync.sh 產生 Xcode 專案；
+# 在 Mac 畫面的終端機執行 bash ios/build-ipa.sh 匯出 Ad Hoc 的 xiaoke-chess-ios.ipa（上傳到 Release，固定檔名）
 ```
 
 ## 架構
@@ -96,13 +110,14 @@ python android/build.py debug install  # 除錯版裝到手機，再用 node e2e
 
 ## 電腦與手機互通對戰
 
-**Windows、Mac 桌面版和 Android 手機版可以互相連線對戰**，用的是同一套連線方式，任兩台都能配對：
+**Windows、Mac 桌面版、Android 手機版、iPad／iPhone 版都可以互相連線對戰**，用的是同一套連線方式，任兩台都能配對：
 
 | 對戰組合 | 可以 |
 |---|---|
 | 電腦 ↔ 電腦（Windows／Mac） | ✅ |
 | 電腦 ↔ 手機（Android） | ✅ |
-| 手機 ↔ 手機 | ✅ |
+| 電腦 ↔ iPad／iPhone | ✅ |
+| 手機 ↔ 手機（Android、iPad、iPhone 任兩台） | ✅ |
 
 怎麼玩：
 

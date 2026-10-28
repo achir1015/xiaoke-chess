@@ -132,3 +132,11 @@ html.mobile .gd-board { order: 1; flex: 1; min-height: 240px; }
 html.mobile .gd-ctrl { order: 3; }
 html.mobile .gd-ctrl button, html.mobile .gd-ctrl select { padding: 6px 8px; font-size: 13px; }
 html.mobile .gd-status { order: 4; }
+
+/* ---------- iPad（電腦版版面＋觸控）：音量點一下打開，不靠滑鼠移上去 ---------- */
+html.touch .m-only { display: inline-block; }
+html.touch .vol:hover .vol-pop, html.touch .vol:focus-within .vol-pop { display: none; }
+html.touch .vol.open .vol-pop { display: flex; }
+html.touch, html.touch body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
+html.touch input, html.touch textarea { -webkit-user-select: text; user-select: text; }
+html.touch .vol-mini { white-space: nowrap; font-size: 12px; padding: 4px 6px; }

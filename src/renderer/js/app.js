@@ -125,6 +125,7 @@ async function init() {
 
   bindUI();
   if (document.documentElement.classList.contains('mobile')) setupMobile();
+  else if (document.documentElement.classList.contains('touch')) setupTouch();
   renderHome();
   showScreen('home');
   if (!validProfile(S.settings.profile)) ensureProfile(); // 第一次使用：必須先選頭像（不阻擋其他初始化）
@@ -306,6 +307,27 @@ function setupMobile() {
       document.body.classList.toggle('sheet-open', !(open && same));
     };
   });
+  setupTouchVolume();
+  // 手機返回鍵：先關對話框、抽屜，再回上一頁
+  window.__xkcBack = () => {
+    const m = $('.modal-back');
+    if (m) { const btns = m.querySelectorAll('.modal-btns button'); (btns[0] || btns[btns.length - 1]).click(); return true; }
+    if (document.body.classList.contains('sheet-open')) { document.body.classList.remove('sheet-open'); return true; }
+    if ($$('.vol.open').length) { $$('.vol.open').forEach((x) => x.classList.remove('open')); return true; }
+    if (S.screen === 'game') { leaveGame(); return true; }
+    if (S.screen === 'guide') { $('#scr-guide .gd-head button').click(); return true; }
+    if (S.screen === 'records') { showScreen('home'); return true; }
+    return false;
+  };
+}
+
+// iPad（電腦版版面、觸控螢幕）：沒有滑鼠，音量改成點一下打開；棋盤提示改成手指操作
+function setupTouch() {
+  setupTouchVolume();
+  $('.board-tip').textContent = '點棋子選子落子．兩指拖曳旋轉．兩指捏合縮放';
+}
+
+function setupTouchVolume() {
   // 音量：點圖示打開直立滑桿（手機沒有滑鼠移上去的動作）
   const toggleVol = (btn) => (e) => {
     e.stopPropagation();
@@ -321,17 +343,6 @@ function setupMobile() {
   $('#musicPlay').onclick = (e) => { e.stopPropagation(); music.toggle(); $('#musicPlay').textContent = music.playing ? '暫停' : '播放'; };
   $$('.vol-pop').forEach((p) => p.addEventListener('click', (e) => e.stopPropagation()));
   document.addEventListener('click', () => $$('.vol.open').forEach((x) => x.classList.remove('open')));
-  // 手機返回鍵：先關對話框、抽屜，再回上一頁
-  window.__xkcBack = () => {
-    const m = $('.modal-back');
-    if (m) { const btns = m.querySelectorAll('.modal-btns button'); (btns[0] || btns[btns.length - 1]).click(); return true; }
-    if (document.body.classList.contains('sheet-open')) { document.body.classList.remove('sheet-open'); return true; }
-    if ($$('.vol.open').length) { $$('.vol.open').forEach((x) => x.classList.remove('open')); return true; }
-    if (S.screen === 'game') { leaveGame(); return true; }
-    if (S.screen === 'guide') { $('#scr-guide .gd-head button').click(); return true; }
-    if (S.screen === 'records') { showScreen('home'); return true; }
-    return false;
-  };
 }
 
 // ---------------- 日期時間、音量 ----------------
@@ -1559,7 +1570,7 @@ async function openAbout() {
   const status = h('div', { class: 'upd-status muted' }, '正在檢查是否有新版本…');
   const body = h('div', { class: 'about' },
     h('div', { class: 'about-head' }, h('div', { class: 'hero-piece small' }, '帥'),
-      h('div', {}, h('h2', {}, '小柯機器人象棋遊戲'), h('div', { class: 'muted' }, `版本 v${S.info.version}　（${S.info.platform === 'darwin' ? 'macOS' : S.info.platform === 'win32' ? 'Windows' : S.info.platform}）`))),
+      h('div', {}, h('h2', {}, '小柯機器人象棋遊戲'), h('div', { class: 'muted' }, `版本 v${S.info.version}　（${S.info.platform === 'darwin' ? 'macOS' : S.info.platform === 'win32' ? 'Windows' : S.info.platform === 'ios' ? 'iPad／iPhone' : S.info.platform === 'android' ? 'Android' : S.info.platform}）`))),
     h('p', { class: 'credit-line' }, CREDIT),
     h('p', { class: 'muted small' }, '3D 中國象棋：整盤與半盤（暗棋）；與 AI 對賽、與真人遠端對賽（含語音）、AI 與 AI 對賽；20 首原創背景音樂；AI 軍師；自動收錄棋譜。'),
     h('p', { class: 'muted small' }, '半盤規則參考：github.com/lwher/Chinese-chess-half-mode'),
@@ -1597,7 +1608,7 @@ async function checkUpdate(manual, statusEl) {
 
 async function startUpdate(info) {
   if (!info.canInstall) {
-    const v = await modal('下載新版本', h('p', {}, info.flavor === 'dev' ? '目前是開發版，請到 GitHub 下載安裝檔。' : '找不到這個平台的安裝檔，請到 GitHub 下載。'), [{ label: '取消', value: false }, { label: '開啟下載頁', value: true, primary: true }]);
+    const v = await modal('下載新版本', h('p', {}, info.flavor === 'dev' ? '目前是開發版，請到 GitHub 下載安裝檔。' : info.flavor === 'ios' ? (info.asset ? '會用 Safari 開啟安裝頁，按「安裝到這台 iPad／iPhone」即可更新，棋譜與設定都會保留。' : '這一版還沒有 iPad／iPhone 安裝檔，請稍後再檢查。') : '找不到這個平台的安裝檔，請到 GitHub 下載。'), [{ label: '取消', value: false }, { label: '開啟下載頁', value: true, primary: true }]);
     if (v) xk.update.openPage();
     return;
   }

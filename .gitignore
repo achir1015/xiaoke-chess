@@ -8,3 +8,7 @@ mobile/www/
 android/build/
 android/local.properties
 android/*.jks
+ios/web/
+ios/*.xcodeproj/
+ios/build/
+ios/XiaokeChess/Info.plist

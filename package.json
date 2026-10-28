@@ -1,7 +1,7 @@
 {
   "name": "xiaoke-chess",
   "productName": "小柯機器人象棋遊戲",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "小柯機器人象棋遊戲：3D 中國象棋整盤與半盤（與 AI、遠端真人＋語音、AI 對 AI、背景音樂、AI 軍師、學習棋譜、自動更新）",
   "main": "src/main/main.js",
   "author": {
