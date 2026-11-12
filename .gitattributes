@@ -3,3 +3,5 @@
 *.mp3 binary
 *.png binary
 *.ico binary
+ios/** text eol=lf
+ios/**/*.png binary

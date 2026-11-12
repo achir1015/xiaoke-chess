@@ -44,9 +44,10 @@ final class Web: NSObject, WKScriptMessageHandlerWithReply, WKNavigationDelegate
         cfg.mediaTypesRequiringUserActionForPlayback = []
         cfg.websiteDataStore = .default()
         // 讓網頁知道自己在 iPhone／iPad App 裡（js/xk-mobile.js 會改用 App 的存檔、開網址功能）
+        // store：App Store 版，不檢查 GitHub 新版（由 App Store 更新）
         // 網頁的錯誤訊息轉到 iOS 系統記錄（除錯：log show --predicate 'process == "XiaokeChess"'）
         let shim = WKUserScript(source: """
-            window.XiaokeIOS = true;
+            window.XiaokeIOS = { store: true };
             (function () {
               function send(k, a) { try { window.webkit.messageHandlers.xkc.postMessage({ cmd: 'log', args: [k, Array.prototype.map.call(a, function (x) { return x && x.stack ? x.stack : String(x); }).join(' ')] }); } catch (e) {} }
               var ce = console.error.bind(console);

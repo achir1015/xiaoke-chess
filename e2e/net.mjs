@@ -29,7 +29,7 @@ async function launch(profile, name) {
   win.on('pageerror', (e) => errors.push('[pageerror] ' + e.message));
   await win.waitForSelector('#btnHost', { timeout: 20000 });
   await win.evaluate(async ({ port, name }) => {
-    window.__xkc.settings = await window.xk.settings.set({ playerName: name, server: { mode: 'custom', host: '127.0.0.1', port, path: '/', secure: false }, music: { autoplay: false }, profile: name === '小明' ? { avatar: 'm05', advisor: 'am01' } : { avatar: 'f02', advisor: 'af03' } });
+    window.__xkc.settings = await window.xk.settings.set({ playerName: name, server: { mode: 'custom', host: '127.0.0.1', port, path: '/', secure: false }, music: { autoplay: false }, netTermsOK: true, profile: name === '小明' ? { avatar: 'm05', advisor: 'am01' } : { avatar: 'f02', advisor: 'af03' } });
     document.querySelectorAll('.modal-back').forEach((b) => b.remove());
   }, { port: PORT, name });
   const waitFor = async (fn, arg, ms = 20000) => {
@@ -154,6 +154,52 @@ try {
   check('認輸同步', (await A.win.evaluate(() => window.__xkc.game.result.winner)) === 1);
   await A.win.screenshot({ path: path.join(outDir, 'net-A-end.png') });
   for (const X of [A, B]) { await X.waitFor(() => document.querySelector('.modal')); await X.win.click('.modal button.primary'); }
+
+  // 聊天過濾不雅字詞（App Store 準則 1.2）
+  await B.win.click('.tab[data-tab="chat"]');
+  await B.win.fill('#chatInput', '你這個白痴');
+  await B.win.press('#chatInput', 'Enter');
+  await A.waitFor(() => document.querySelector('#chatLog').textContent.includes('你這個＊＊'));
+  check('聊天會過濾不雅字詞', !(await A.win.evaluate(() => document.querySelector('#chatLog').textContent.includes('白痴'))));
+
+  // 封鎖：A 封鎖 B → A 回首頁；B 再加入 A 的新房間會被拒絕
+  await A.win.click('.tab[data-tab="chat"]');
+  await A.win.click('#btnBlock');
+  await A.waitFor(() => document.querySelector('.modal'));
+  await A.win.click('.modal button:has-text("只封鎖")');
+  await A.waitFor(() => document.querySelector('#scr-home').classList.contains('on'));
+  check('封鎖後離開對局', (await A.win.evaluate(() => (window.__xkc.settings.blocked || []).map((b) => b.name).join())) === '阿華');
+  await B.waitFor(() => /離開|中斷|結束連線/.test(document.querySelector('#chatLog').textContent), null, 25000);
+  await B.win.evaluate(() => document.querySelector('#btnHome').click());
+  await B.waitFor(() => document.querySelector('.modal')).catch(() => {});
+  await B.win.evaluate(() => { const m = document.querySelector('.modal button.primary'); if (m) m.click(); });
+  await B.waitFor(() => document.querySelector('#scr-home').classList.contains('on'));
+  const hostAgain = async () => {
+    await A.win.selectOption('#hostSide', 'red');
+    await A.win.click('#btnHost');
+    return (await A.waitFor(() => document.querySelector('.room-code')?.textContent)).replace(/\s/g, '');
+  };
+  let code2 = await hostAgain();
+  await B.win.fill('#joinCode', code2);
+  await B.win.click('#btnJoin');
+  await A.waitFor(() => /封鎖名單/.test(document.querySelector('#netStatus, .net-wait, body').textContent));
+  await B.waitFor(() => /無法和您連線/.test(document.body.textContent));
+  check('被封鎖的棋友無法再連線', !(await A.win.evaluate(() => window.__xkc.netStarted)));
+  await A.win.screenshot({ path: path.join(outDir, 'net-A-blocked.png') });
+
+  // 解除封鎖；第一次連線對戰要先同意須知
+  await A.win.evaluate(async () => { window.__xkc.settings = await window.xk.settings.set({ blocked: [], netTermsOK: false }); });
+  await A.win.selectOption('#hostSide', 'red');
+  await A.win.click('#btnHost');
+  await A.waitFor(() => document.querySelector('.modal h3, .modal .modal-title')?.textContent.includes('連線對戰須知') || document.querySelector('.modal')?.textContent.includes('連線對戰須知'));
+  check('第一次連線對戰顯示須知', true);
+  await A.win.click('.modal button.primary');
+  code2 = (await A.waitFor(() => document.querySelector('.room-code')?.textContent)).replace(/\s/g, '');
+  await B.win.fill('#joinCode', code2);
+  await B.win.click('#btnJoin');
+  await A.waitFor(() => window.__xkc.netStarted);
+  await B.waitFor(() => window.__xkc.netStarted);
+  check('解除封鎖後可以再對戰', true);
 
   // 對方離線
   await B.app.close();

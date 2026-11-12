@@ -150,7 +150,8 @@ export class AdvisorPanel {
     // 建議著法標在棋盤上
     if (c.half) { if (c.mine && c.act >= 0) this.ctx().showHintAct(c.act); }
     else if (c.mine && c.lines[0]) this.ctx().showHint(c.lines[0].best);
-    if (!this.hasKey) {
+    // 第一次把局面送給 Claude 之前要先同意（不同意就只用本機引擎）
+    if (!this.hasKey || (this.ctx().consent && !(await this.ctx().consent()))) {
       pending.classList.remove('thinking');
       pending.textContent = this.offlineAnswer(c);
       this.scroll();

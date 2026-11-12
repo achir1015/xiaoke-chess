@@ -50,13 +50,13 @@ try {
   await phone.reload();
   await waitPhone(() => window.__xkc && window.__xkcBoard);
   await phone.evaluate(async () => {
-    window.__xkc.settings = await window.xk.settings.set({ playerName: '手機棋友', server: { mode: 'default' }, music: { autoplay: false } });
+    window.__xkc.settings = await window.xk.settings.set({ playerName: '手機棋友', server: { mode: 'default' }, music: { autoplay: false }, netTermsOK: true });
     document.querySelectorAll('.modal-back').forEach((b) => b.remove());
     document.querySelector('.kindbtn[data-k="full"]').click();
   });
   await pc.waitForSelector('#btnHost', { timeout: 20000 });
   await pc.evaluate(async () => {
-    window.__xkc.settings = await window.xk.settings.set({ playerName: '電腦棋友', server: { mode: 'default' }, music: { autoplay: false }, profile: { avatar: 'f02', advisor: 'af03' } });
+    window.__xkc.settings = await window.xk.settings.set({ playerName: '電腦棋友', server: { mode: 'default' }, music: { autoplay: false }, netTermsOK: true, profile: { avatar: 'f02', advisor: 'af03' } });
     document.querySelectorAll('.modal-back').forEach((b) => b.remove());
   });
 

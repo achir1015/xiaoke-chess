@@ -1,21 +1,26 @@
 // 手機版（Android、iPhone／iPad）與網頁版的 window.xk：取代桌面版主程序提供的功能。
 // 桌面版有 preload 提供 window.xk，這個檔案就什麼都不做。
 // Android App 由原生程式提供 window.XiaokeAndroid（語音、存檔、更新、開網址）；
-// iPhone／iPad App 提供 window.XiaokeIOS＋messageHandlers.xkc（存檔分享、開網址）；在一般瀏覽器測試時改用網頁功能。
+// iPhone／iPad／Mac App 提供 window.XiaokeIOS＋messageHandlers.xkc（存檔分享、開網址）；在一般瀏覽器測試時改用網頁功能。
+// XiaokeIOS 是物件：{ store: App Store 版（不檢查更新）, mac: Mac App Store 版（電腦版版面） }
 (function () {
   'use strict';
   if (window.xk) return;
   var A = window.XiaokeAndroid || null;
   var isAndroid = !!A;
   var isIOS = !!(window.XiaokeIOS && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.xkc);
+  var IOSI = isIOS && typeof window.XiaokeIOS === 'object' ? window.XiaokeIOS : {};
+  var isMac = !!IOSI.mac;
+  var store = !!IOSI.store;
   function ios(cmd, args) { return window.webkit.messageHandlers.xkc.postMessage({ cmd: cmd, args: args || [] }); }
   var ua = navigator.userAgent || '';
   // iPad 的 WebView 用電腦版 UA（Macintosh），所以 iPad 走電腦版版面（橫放），只有 iPhone 用手機直立版面
-  var mobile = isAndroid || /Android|iPhone|Mobile/i.test(ua) || /[?&]mobile=1/.test(location.search);
-  var touch = mobile || isIOS || navigator.maxTouchPoints > 1;
+  var mobile = !isMac && (isAndroid || /Android|iPhone|Mobile/i.test(ua) || /[?&]mobile=1/.test(location.search));
+  var touch = !isMac && (mobile || isIOS || navigator.maxTouchPoints > 1);
   if (mobile) document.documentElement.classList.add('mobile');
   else if (touch) document.documentElement.classList.add('touch');
-  document.documentElement.classList.add(isAndroid ? 'android' : isIOS ? 'ios' : 'webapp');
+  document.documentElement.classList.add(isAndroid ? 'android' : isMac ? 'mac' : isIOS ? 'ios' : 'webapp');
+  if (store) document.documentElement.classList.add('store');
 
   function parse(s) { try { return JSON.parse(s); } catch (e) { return null; } }
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
@@ -51,7 +56,7 @@
     s.advisor = { model: settings.advisor.model, effort: settings.advisor.effort, hasKey: !!settings.advisor.apiKey, envKey: false };
     return s;
   }
-  var KEYS = ['playerName', 'level', 'aiSide', 'learnFromGames', 'stun', 'sfx', 'view', 'homeKind', 'autoUpdate', 'aivai', 'aiSideHalf', 'profile', 'proxyLevel', 'sfxVolume', 'guideVoice', 'guideRate'];
+  var KEYS = ['playerName', 'level', 'aiSide', 'learnFromGames', 'stun', 'sfx', 'view', 'homeKind', 'autoUpdate', 'aivai', 'aiSideHalf', 'profile', 'proxyLevel', 'sfxVolume', 'guideVoice', 'guideRate', 'netTermsOK', 'blocked', 'claudeConsent'];
   function setSettings(p) {
     p = p || {};
     KEYS.forEach(function (k) { if (k in p) settings[k] = p[k]; });
@@ -162,6 +167,8 @@
   }
   function checkUpdate() {
     var cur = appVersion();
+    // App Store 版由 App Store 更新，不連 GitHub
+    if (store) return Promise.resolve({ current: cur, latest: cur, newer: false, notes: '', page: '', asset: null, flavor: 'store', canInstall: false });
     if (isAndroid) {
       return new Promise(function (res, rej) {
         setTimeout(function () {
@@ -274,7 +281,7 @@
   window.xk = {
     settings: { get: function () { return Promise.resolve(pub()); }, set: function (p) { return Promise.resolve(setSettings(p)); } },
     sys: {
-      info: function () { return Promise.resolve({ platform: isAndroid ? 'android' : isIOS ? 'ios' : 'web', arch: '', version: appVersion(), packaged: isAndroid || isIOS, profile: '', electron: '', mobile: mobile }); },
+      info: function () { return Promise.resolve({ platform: isAndroid ? 'android' : isMac ? 'darwin' : isIOS ? 'ios' : 'web', arch: '', version: appVersion(), packaged: isAndroid || isIOS, store: store, profile: '', electron: '', mobile: mobile }); },
       askMicrophone: function () { return Promise.resolve(true); },
     },
     win: { attention: function () { try { if (navigator.vibrate) navigator.vibrate([120, 60, 120]); } catch (e) { /* 不支援 */ } return Promise.resolve(); } },
@@ -331,5 +338,7 @@
     touch: touch,
     android: isAndroid,
     ios: isIOS,
+    mac: isMac,
+    store: store,
   };
 })();

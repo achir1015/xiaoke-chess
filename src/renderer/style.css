@@ -406,3 +406,10 @@ body.mode-aivai #btnHint, body.mode-aivai #btnUndo, body.mode-aivai #btnResign {
 .gd-tabs .kindbtn b { white-space: nowrap; }
 @media (max-width: 860px) { .gd-main { grid-template-columns: 1fr; grid-template-rows: auto minmax(320px, 1fr) auto auto; } .gd-board { grid-row: 2; } .gd-caption { grid-column: 1; grid-row: 1; } .gd-ctrl, .gd-status { grid-column: 1; } .gd-ctrl { grid-row: 3; } .gd-status { grid-row: 4; } }
 @media (max-width: 1180px) { .gd-body { grid-template-columns: 170px 1fr; } .gd-item { font-size: 14px; padding: 8px; } .gd-caption { font-size: 17px; } }
+
+/* 連線對戰：封鎖並檢舉、須知 */
+.block-btn { color: #ffb4a8; border-color: #8c3a2c; }
+.voicebar { flex-wrap: wrap; }
+.terms p { margin: 6px 0; line-height: 1.6; }
+.terms ul { margin: 6px 0; padding-left: 1.3em; line-height: 1.6; }
+html.store .upd-only { display: none !important; }
